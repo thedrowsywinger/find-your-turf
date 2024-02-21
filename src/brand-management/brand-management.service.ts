@@ -33,6 +33,7 @@ export class BrandManagementService {
             newBrand = await queryRunner.manager.save(Brands, brandInfo);
             fieldInfo.brandId = newBrand.id; 
             newField = await queryRunner.manager.save(Fields, fieldInfo);
+            await queryRunner.commitTransaction();
         } catch (error) {
             console.log(error)
             await queryRunner.rollbackTransaction();
@@ -45,20 +46,12 @@ export class BrandManagementService {
         }
     }
 
-    async updateBrand() {
-        return 'updateBrand';
-    }
+    async listFieldsService(): Promise<any> {
 
-    async deleteBrand() {
-        return 'deleteBrand';
-    }
+        const allFields = await this.fieldRepository.find();
+        if (allFields.length > 0) return { data: allFields, error: null };
+        else return { data: null, error: ApiResponseMessages.NO_FIELDS_AVAILABLE_AT_THE_MOMENT };
 
-    async getBrand() {
-        return 'getBrand';
-    }
-
-    async getBrands() {
-        return 'getBrands';
-    }
+    };
 
 }
