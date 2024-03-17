@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BrandManagementModule } from './brand-management/brand-management.module';
+import { FieldManagementModule } from './field-management/field-management.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { BrandManagementModule } from './brand-management/brand-management.modul
       logging: false
     }),
     BrandManagementModule,
+    FieldManagementModule,
   ],
   controllers: [AppController],
   providers: [AppService],

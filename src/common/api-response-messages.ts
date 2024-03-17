@@ -5,4 +5,7 @@ export enum ApiResponseMessages {
 
     NO_FIELDS_AVAILABLE_AT_THE_MOMENT = 'No Fields Available At The Moment',
 
+    INVALID_QUERY_PARAMETER_PROVIDED = 'Invalid Field Filter Provided',
+    INVALID_BRAND = 'Invalid Brand Provided'    
+
 }

@@ -5,7 +5,6 @@ import { Brands } from 'src/db-modules/brands.entity';
 import { Fields } from 'src/db-modules/fields.entity';
 import { DataSource, Repository } from 'typeorm';
 import { BrandInfoDto } from './dto/brand-info.dto';
-import { FieldInfoDto } from './dto/field-info.dto';
 
 @Injectable()
 export class BrandManagementService {
@@ -44,14 +43,6 @@ export class BrandManagementService {
         } else {
             return { data: null, error: ApiResponseMessages.SYSTEM_ERROR };
         }
-    }
-
-    async listFieldsService(): Promise<any> {
-
-        const allFields = await this.fieldRepository.find();
-        if (allFields.length > 0) return { data: allFields, error: null };
-        else return { data: null, error: ApiResponseMessages.NO_FIELDS_AVAILABLE_AT_THE_MOMENT };
-
     };
 
 }
