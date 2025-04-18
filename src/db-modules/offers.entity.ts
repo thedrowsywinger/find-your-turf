@@ -29,12 +29,18 @@ export class Offers {
   @Column()
   createdBy: number;
 
-  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP'})
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP'})
   createdAt: Date;
 
   @Column({ nullable: true })
   updatedBy: number;
 
-  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP'})
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP'})
   updatedAt: Date;
+
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP'})
+  validFrom: Date;
+
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP'})
+  validTill: Date;
 }

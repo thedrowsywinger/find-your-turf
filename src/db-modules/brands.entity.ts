@@ -12,8 +12,17 @@ export class Brands {
   @Column({ length: 255 })
   name: string;
 
-  @Column({ length: 255 })
-  hq: string;
+  @Column({ length: 255, nullable: true })
+  description: string;
+
+  @Column({ length: 255, nullable: false })
+  contactEmail: string;
+
+  @Column({ length: 255, nullable: false })
+  contactPhone: string;
+
+  @Column({ length: 255, nullable: false })
+  fullAddress: string;
 
   @Column({ default: 1 })
   status: number;
@@ -21,12 +30,12 @@ export class Brands {
   @Column()
   createdBy: number;
 
-  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP'})
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP'})
   createdAt: Date;
 
   @Column({ nullable: true })
   updatedBy: number;
 
-  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   updatedAt: Date;
 }

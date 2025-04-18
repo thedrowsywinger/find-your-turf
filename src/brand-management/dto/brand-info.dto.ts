@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString } from "class-validator";
+import { IsEmail, IsNotEmpty, IsOptional, IsString } from "class-validator";
 
 export class BrandInfoDto {
     @IsString()
@@ -6,5 +6,19 @@ export class BrandInfoDto {
     name: string;
 
     @IsString()
-    hq: string;
+    @IsOptional()
+    description: string;
+
+    @IsString()
+    @IsNotEmpty()
+    @IsEmail()
+    contactEmail: string;
+
+    @IsString()
+    @IsNotEmpty()
+    contactPhone: string;
+
+    @IsString()
+    @IsNotEmpty()
+    fullAddress: string;
 }

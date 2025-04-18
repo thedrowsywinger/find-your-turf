@@ -1,0 +1,366 @@
+import { Body, Controller, HttpStatus, Post, Get, UseGuards, Req, Headers, UnauthorizedException, Res } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiCookieAuth, ApiBody, ApiHeader, ApiExtraModels } from '@nestjs/swagger';
+import { Response } from 'express';
+import { AuthService } from './auth.service';
+import { AuthCredentialsDto, LoginDto } from './dto/auth-credentials.dto';
+import { BaseSerializer } from '../app.serializer';
+import { ApiResponseMessages } from '../common/api-response-messages';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { AuthRateLimit } from './decorators/auth-rate-limit.decorator';
+
+@ApiTags('auth')
+@Controller('auth')
+@ApiExtraModels(BaseSerializer)
+export class AuthController {
+  constructor(private authService: AuthService) {}
+
+  @Post('/register')
+  @AuthRateLimit()
+  @ApiOperation({ 
+    summary: 'Register new user', 
+    description: 'Create a new user account with role-based access'
+  })
+  @ApiBody({
+    type: AuthCredentialsDto,
+    description: 'User registration credentials',
+    required: true
+  })
+  @ApiResponse({ 
+    status: 201, 
+    description: 'User registered successfully',
+    type: BaseSerializer,
+    schema: {
+      allOf: [
+        { $ref: '#/components/schemas/BaseSerializer' },
+        {
+          properties: {
+            data: {
+              type: 'object',
+              properties: {
+                accessToken: {
+                  type: 'string',
+                  example: 'eyJhbGciOiJ...'
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  })
+  @ApiResponse({ 
+    status: 400, 
+    description: 'Invalid input or email already exists',
+    type: BaseSerializer
+  })
+  async register(
+    @Body() authCredentialsDto: AuthCredentialsDto,
+    @Res({ passthrough: true }) response: Response
+  ): Promise<BaseSerializer> {
+    try {
+      const result = await this.authService.register(authCredentialsDto);
+
+      // Set refresh token in httpOnly cookie
+      if (result.refreshToken) {
+        response.cookie('refreshToken', result.refreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        });
+        delete result.refreshToken; // Don't send refresh token in response body
+      }
+
+      return new BaseSerializer(
+        HttpStatus.CREATED,
+        true,
+        ApiResponseMessages.SUCCESS,
+        { accessToken: result.accessToken },
+        null,
+      );
+    } catch (error) {
+      return new BaseSerializer(
+        HttpStatus.BAD_REQUEST,
+        false,
+        error.message,
+        null,
+        [error.message],
+      );
+    }
+  }
+
+  @Post('/login')
+  @AuthRateLimit()
+  @ApiOperation({ 
+    summary: 'User login [POST /api/v1/auth/login]', 
+    description: 'Authenticate user and receive access token'
+  })
+  @ApiBody({
+    type: LoginDto,
+    description: 'User login credentials',
+    required: true
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Login successful',
+    type: BaseSerializer,
+    schema: {
+      allOf: [
+        { $ref: '#/components/schemas/BaseSerializer' },
+        {
+          properties: {
+            data: {
+              type: 'object',
+              properties: {
+                accessToken: {
+                  type: 'string',
+                  example: 'eyJhbGciOiJ...'
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  })
+  @ApiResponse({ 
+    status: 401, 
+    description: 'Invalid credentials',
+    type: BaseSerializer
+  })
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) response: Response
+  ): Promise<BaseSerializer> {
+    try {
+      const result = await this.authService.login(loginDto);
+
+      // Set refresh token in httpOnly cookie
+      if (result.refreshToken) {
+        response.cookie('refreshToken', result.refreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        });
+        delete result.refreshToken; // Don't send refresh token in response body
+      }
+
+      return new BaseSerializer(
+        HttpStatus.OK,
+        true,
+        ApiResponseMessages.SUCCESS,
+        { accessToken: result.accessToken },
+        null,
+      );
+    } catch (error) {
+      return new BaseSerializer(
+        HttpStatus.UNAUTHORIZED,
+        false,
+        error.message,
+        null,
+        [error.message],
+      );
+    }
+  }
+
+  @Post('/refresh')
+  @AuthRateLimit()
+  @ApiOperation({ 
+    summary: 'Refresh access token [POST /api/v1/auth/refresh]', 
+    description: 'Get new access token using refresh token stored in HTTP-only cookie'
+  })
+  @ApiCookieAuth('refreshToken')
+  @ApiHeader({
+    name: 'Cookie',
+    description: 'HTTP-only cookie containing refresh token',
+    required: true,
+    example: 'refreshToken=eyJhbGciOiJ...'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Token refreshed successfully',
+    type: BaseSerializer,
+    schema: {
+      allOf: [
+        { $ref: '#/components/schemas/BaseSerializer' },
+        {
+          properties: {
+            data: {
+              type: 'object',
+              properties: {
+                accessToken: {
+                  type: 'string',
+                  example: 'eyJhbGciOiJ...'
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  })
+  @ApiResponse({ 
+    status: 401, 
+    description: 'Invalid or missing refresh token',
+    type: BaseSerializer
+  })
+  async refreshToken(
+    @Req() req,
+  ): Promise<BaseSerializer> {
+    try {
+      const refreshToken = req.cookies['refreshToken'];
+      console.log("🚀 ~ auth.controller.ts:163 ~ AuthController ~ refreshToken:", refreshToken);
+      if (!refreshToken) {
+        throw new UnauthorizedException('Refresh token not found');
+      }
+
+      const result = await this.authService.refreshToken(refreshToken);
+      console.log("🚀 ~ auth.controller.ts:169 ~ AuthController ~ result:", result);
+
+      console.log("am i here")
+
+      return new BaseSerializer(
+        HttpStatus.OK,
+        true,
+        ApiResponseMessages.SUCCESS,
+        { accessToken: result.refreshToken },
+        null,
+      );
+    } catch (error) {
+      return new BaseSerializer(
+        HttpStatus.UNAUTHORIZED,
+        false,
+        error.message,
+        null,
+        [error.message],
+      );
+    }
+  }
+
+  @Post('/logout')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ 
+    summary: 'User logout [POST /api/v1/auth/logout]', 
+    description: 'Invalidate refresh token and clear cookie'
+  })
+  @ApiHeader({
+    name: 'Authorization',
+    description: 'Bearer token',
+    required: true,
+    example: 'Bearer eyJhbGciOiJ...'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Logged out successfully',
+    type: BaseSerializer
+  })
+  @ApiResponse({ 
+    status: 401, 
+    description: 'Unauthorized',
+    type: BaseSerializer
+  })
+  async logout(
+    @Req() req,
+    @Res({ passthrough: true }) response: Response
+  ): Promise<BaseSerializer> {
+    // Clear the refresh token cookie
+    response.clearCookie('refreshToken');
+
+    return new BaseSerializer(
+      HttpStatus.OK,
+      true,
+      'Logged out successfully',
+      null,
+      null,
+    );
+  }
+
+  @Get('/profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ 
+    summary: 'Get user profile [GET /api/v1/auth/profile]', 
+    description: 'Get authenticated user profile information'
+  })
+  @ApiHeader({
+    name: 'Authorization',
+    description: 'Bearer token',
+    required: true,
+    example: 'Bearer eyJhbGciOiJ...'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Profile retrieved successfully',
+    type: BaseSerializer,
+    schema: {
+      allOf: [
+        { $ref: '#/components/schemas/BaseSerializer' },
+        {
+          properties: {
+            data: {
+              type: 'object',
+              properties: {
+                id: { type: 'number', example: 1 },
+                code: { type: 'string', example: 'usr_123' },
+                username: { type: 'string', example: 'john_doe' },
+                email: { type: 'string', example: 'john@example.com' },
+                role: { type: 'string', enum: ['admin', 'company', 'consumer', 'facility_manager', 'maintenance_staff', 'customer_service'] },
+                permissions: {
+                  type: 'object',
+                  properties: {
+                    canManageStaff: { type: 'boolean' },
+                    canManageBookings: { type: 'boolean' },
+                    canUpdateSchedules: { type: 'boolean' },
+                    canRespondToReviews: { type: 'boolean' },
+                    canAccessReports: { type: 'boolean' },
+                    canUpdatePricing: { type: 'boolean' },
+                    canModifyFacilities: { type: 'boolean' }
+                  }
+                },
+                status: { type: 'number', example: 1 },
+                createdAt: { type: 'string', format: 'date-time' },
+                updatedAt: { type: 'string', format: 'date-time' }
+              }
+            }
+          }
+        }
+      ]
+    }
+  })
+  @ApiResponse({ 
+    status: 401, 
+    description: 'Unauthorized',
+    type: BaseSerializer
+  })
+  async getProfile(@Req() req): Promise<BaseSerializer> {
+    const email = req.user?.email;
+    if (!email) {
+      return new BaseSerializer(
+        HttpStatus.UNAUTHORIZED,
+        false,
+        'Unauthorized',
+        null,
+        ['Unauthorized']
+      );
+    }
+    const profile = await this.authService.getProfileByEmail(email);
+    if (!profile) {
+      return new BaseSerializer(
+        HttpStatus.NOT_FOUND,
+        false,
+        'User not found',
+        null,
+        ['User not found']
+      );
+    }
+    return new BaseSerializer(
+      HttpStatus.OK,
+      true,
+      ApiResponseMessages.SUCCESS,
+      profile,
+      null,
+    );
+  }
+}
