@@ -3,25 +3,23 @@ import { BrandManagementService } from './brand-management.service';
 import { ApiResponseMessages } from 'src/common/api-response-messages';
 import { BaseSerializer } from 'src/app.serializer';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../db-modules/users.entity';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiExtraModels, ApiQuery } from '@nestjs/swagger';
 import { BrandInfoDto } from './dto/brand-info.dto';
+import { JwtRolesGuard } from '../auth/guards/jwt-role.guard';
 
 @ApiTags('brands')
 @Controller('brand')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@ApiBearerAuth('access-token')
+// @UseGuards(JwtRolesGuard(UserRole.COMPANY))
 @ApiExtraModels(BaseSerializer, BrandInfoDto)
 export class BrandManagementController {
     constructor(private readonly brandManagementService: BrandManagementService) {}
 
     @Post('create')
     @ApiBearerAuth('access-token')
-    @UseGuards(JwtAuthGuard)
-    // @UseGuards(JwtAuthGuard, RolesGuard)
-    // @Roles(UserRole.COMPANY)
-    // @ApiBearerAuth('access-token')
+    @UseGuards(JwtRolesGuard(UserRole.ADMIN))
     @ApiOperation({ 
         summary: 'Create new brand [POST /api/v1/brand/create]',
         description: 'Create a new brand with initial field information. Only company administrators can create brands.' 
@@ -95,9 +93,9 @@ export class BrandManagementController {
     })
     async createBrand(
         @Body() brandInfo: BrandInfoDto,
-        @Req() req
+        @Req() request
     ) {
-        const { data, error } = await this.brandManagementService.createBrandService(brandInfo, req);
+        const { data, error } = await this.brandManagementService.createBrandService(brandInfo, request.user);
         if (error) {
             return new BaseSerializer(
                 HttpStatus.NOT_FOUND,

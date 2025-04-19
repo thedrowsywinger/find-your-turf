@@ -17,22 +17,26 @@ export class BrandManagementService {
         private readonly fieldRepository: Repository<Fields>
     ) { }
 
-    async createBrandService(brandInfo, request): Promise<any> {
-        if (request.user.role === 'company') {
-            brandInfo['createdBy'] = request.user.id;
-            const newBrand = await this.brandRepository.save(brandInfo);
-            if (newBrand) return { data: newBrand, error: null };
-            else return { data: null, error: ApiResponseMessages.SYSTEM_ERROR };
-        
-        } else {
-            return { data: null, error: ApiResponseMessages.UNAUTHORIZED };
+    async createBrandService(brandInfo, user): Promise<any> {
+        brandInfo['createdBy'] = user.id;
+
+        // Check if the brand already exists
+        const existingBrand = await this.brandRepository.findOne({
+            where: { name: brandInfo.name }
+        });
+        if (existingBrand) {
+            return { data: null, error: 'Brand already exists' };
         };
+
+        const newBrand = await this.brandRepository.save(brandInfo);
+        if (newBrand) return { data: newBrand, error: null };
+        else return { data: null, error: ApiResponseMessages.SYSTEM_ERROR };
     };
 
     async listBrandsService(): Promise<any> {
         try {
             const brands = await this.brandRepository.find({
-                relations: ['fields'],
+                // relations: ['fields'],
                 where: { status: 1 }
             });
             return { data: brands, error: null };

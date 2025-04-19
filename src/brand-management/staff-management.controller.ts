@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Req, ParseIntPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody, ApiParam, ApiQuery, ApiExtraModels } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
+// import { RolesGuard } from '../auth/guards/jwt-brand.guard';
 import { StaffPermissionsGuard } from '../auth/guards/staff-permissions.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
@@ -12,7 +12,7 @@ import { BaseSerializer } from '../app.serializer';
 
 @ApiTags('staff-management')
 @Controller('staff')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard)
 @ApiExtraModels(BaseSerializer)
 export class StaffManagementController {
     constructor(private readonly staffManagementService: StaffManagementService) {}

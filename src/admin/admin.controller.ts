@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Query, Param, UseGuards, Req, ParseIntPipe } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
+// import { RolesGuard } from '../auth/guards/jwt-brand.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../db-modules/users.entity';
 import { BaseSerializer } from '../app.serializer';
@@ -9,7 +9,7 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiQuery, ApiParam, 
 
 @ApiTags('admin')
 @Controller('admin')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard)
 @Roles(UserRole.ADMIN)
 @ApiExtraModels(BaseSerializer)
 export class AdminController {

@@ -9,7 +9,7 @@ import { FieldScheduleDto, UpdateFieldScheduleDto } from './dto/field-schedule.d
 import { CreateFieldReviewDto, RespondToReviewDto } from './dto/field-review.dto';
 import { UpdateFieldPricingDto } from './dto/field-pricing.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
+// import { RolesGuard } from '../auth/guards/jwt-brand.guard';
 import { StaffPermissionsGuard } from '../auth/guards/staff-permissions.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
@@ -18,7 +18,7 @@ import { SportType } from '../db-modules/fields.entity';
 
 @ApiTags('fields')
 @Controller('field')
-@UseGuards(JwtAuthGuard, RolesGuard, StaffPermissionsGuard)
+@UseGuards(JwtAuthGuard)
 @ApiExtraModels(BaseSerializer, FieldInfoDto, FieldScheduleDto, UpdateFieldScheduleDto, CreateFieldReviewDto)
 export class FieldManagementController {
     constructor(private readonly fieldManagementService: FieldManagementService) {}
@@ -676,7 +676,7 @@ export class FieldManagementController {
     @Post(':fieldId/pricing')
     @Roles(UserRole.COMPANY, UserRole.FACILITY_MANAGER)
     @RequirePermissions('canUpdatePricing')
-    @UseGuards(JwtAuthGuard, RolesGuard)
+    @UseGuards(JwtAuthGuard)
     @ApiBearerAuth('access-token')
     @ApiOperation({ 
         summary: 'Update field pricing [POST /api/v1/field/{fieldId}/pricing]', 

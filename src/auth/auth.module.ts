@@ -5,7 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Users } from '../db-modules/users.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { RolesGuard } from './guards/roles.guard';
+// import { RolesGuard } from './guards/jwt-brand.guard';
 import { APP_GUARD } from '@nestjs/core';
 import { LoggingModule } from '../common/logging/logging.module';
 import { AuthController } from './auth.controller';
@@ -32,10 +32,10 @@ import { AuthService } from './auth.service';
     AuthService,
     JwtStrategy,
     ConfigService,
-    {
-      provide: APP_GUARD,
-      useClass: RolesGuard,
-    }
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: RolesGuard,
+    // }
   ],
   exports: [JwtStrategy, PassportModule],
 })
