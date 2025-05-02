@@ -1,4 +1,6 @@
-import { IsInt, IsNotEmpty, IsString } from "class-validator";
+import { ApiProperty } from "@nestjs/swagger";
+import { IsEnum, IsInt, IsNotEmpty, IsString } from "class-validator";
+import { SportType } from "../../db-modules/fields.entity";
 
 export class FieldInfoDto {
     @IsString()
@@ -24,5 +26,9 @@ export class FieldInfoDto {
     @IsInt()
     @IsNotEmpty()
     brandId: number;
+
+    @ApiProperty({ enum: SportType })
+    @IsEnum(SportType)
+    sportType: string;
     
 }

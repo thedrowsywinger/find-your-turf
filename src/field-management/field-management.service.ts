@@ -16,6 +16,8 @@ import { LoggingService } from '../common/logging/logging.service';
 import { NotificationService } from '../common/notifications/notification.service';
 import { format, parseISO, isWithinInterval, eachDayOfInterval, isSameDay } from 'date-fns';
 
+import { v4 } from 'uuid';
+
 @Injectable()
 export class FieldManagementService {
     constructor(
@@ -60,7 +62,7 @@ export class FieldManagementService {
             // Build base query
             const queryBuilder = this.fieldRepository
                 .createQueryBuilder('field')
-                .leftJoinAndSelect('field.brandId', 'brand')
+                .leftJoinAndSelect('field.brand', 'brand')
                 .where('field.status = :status', { status: 1 }); // Only active fields
 
             // Apply basic filters
@@ -190,6 +192,7 @@ export class FieldManagementService {
 
     async createField(fieldInfo: FieldInfoDto, userId: number): Promise<Fields> {
         // First create the field without pricing
+        // @ts-ignore
         const field = this.fieldRepository.create({
             name: fieldInfo.name,
             address: fieldInfo.address,
@@ -207,6 +210,7 @@ export class FieldManagementService {
         if (fieldInfo.pricing && fieldInfo.pricing.length > 0) {
             const pricingEntities = fieldInfo.pricing.map(pricing => 
                 this.fieldPricingRepository.create({
+                    // @ts-ignore
                     fieldId: { id: savedField.id }, // Properly reference the field
                     price: pricing.price,
                     durationInMinutes: pricing.durationInMinutes,
@@ -219,6 +223,7 @@ export class FieldManagementService {
         }
 
         return this.fieldRepository.findOne({
+            // @ts-ignore
             where: { id: savedField.id },
             relations: ['pricing', 'brandId']
         });
@@ -251,17 +256,43 @@ export class FieldManagementService {
         }
     }
 
-    async addFieldsService(body: FieldInfoDto): Promise<any> {
-        let brand: Brands | undefined = await this.brandRepository.findOne({ where: { id: body.brandId } });
+    async addFieldsService(body: FieldInfoDto, user): Promise<any> {
+        let brand: Brands | undefined = await this.brandRepository.findOne({ where: { code: body.brandId } });
         if (!brand) return { data: null, error: ApiResponseMessages.INVALID_BRAND };
 
+        const code = v4();
         try {
+            console.log({
+                ...body,
+                brandId: brand.id
+            })
             const fieldData = {
                 ...body,
-                brandId: brand
+                code,
+                // brand: brand,
+                brandId: brand.id,
+                // brandId: { id: brand.id }, // Properly reference the brand
+                createdBy: user.id,
+                createdAt: new Date(),
             };
-            
-            let newField = await this.fieldRepository.save(fieldData);
+            // @ts-ignore
+            await this.fieldRepository.save(fieldData);
+            let newField = await this.fieldRepository.findOne({ where: { code } }); 
+
+            if (body.pricing && body.pricing.length > 0) {
+                const pricingEntities = body.pricing.map(pricing => 
+                    this.fieldPricingRepository.create({
+                        fieldId: { id: newField.id }, // Properly reference the field
+                        price: pricing.price,
+                        durationInMinutes: pricing.durationInMinutes,
+                        createdBy: user.id,
+                        status: 1
+                    })
+                );
+    
+                await this.fieldPricingRepository.save(pricingEntities);
+            }
+    
             return { data: newField, error: null };
         } catch (error) {
             console.error('Error in addFieldsService:', error);
@@ -638,11 +669,11 @@ export class FieldManagementService {
                 relations: ['brandId']
             });
 
-            if (field && field.brandId) {
+            if (field && field.brand) {
                 await this.notificationService.sendReviewNotification({
                     id: savedReview.id,
                     fieldName: field.name,
-                    fieldOwnerEmail: field.brandId.contactEmail,
+                    fieldOwnerEmail: field.brand.contactEmail,
                     rating: reviewDto.rating,
                     review: reviewDto.review
                 });
@@ -676,7 +707,7 @@ export class FieldManagementService {
             relations: ['brandId']
         });
 
-        if (!field || field.brandId.id !== userId) {
+        if (!field || field.brand.id !== userId) {
             return { data: null, error: 'Unauthorized to respond to this review' };
         }
 

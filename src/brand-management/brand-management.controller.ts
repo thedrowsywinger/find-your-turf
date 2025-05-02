@@ -6,26 +6,26 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../db-modules/users.entity';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiExtraModels, ApiQuery } from '@nestjs/swagger';
-import { BrandInfoDto } from './dto/brand-info.dto';
 import { JwtRolesGuard } from '../auth/guards/jwt-role.guard';
+import { CreateBrandDto } from './dto/brand-info.dto';
 
 @ApiTags('brands')
 @Controller('brand')
 @ApiBearerAuth('access-token')
-// @UseGuards(JwtRolesGuard(UserRole.COMPANY))
-@ApiExtraModels(BaseSerializer, BrandInfoDto)
+@UseGuards(JwtRolesGuard(UserRole.COMPANY, UserRole.ADMIN))
+@ApiExtraModels(BaseSerializer, CreateBrandDto)
 export class BrandManagementController {
     constructor(private readonly brandManagementService: BrandManagementService) {}
 
     @Post('create')
     @ApiBearerAuth('access-token')
-    @UseGuards(JwtRolesGuard(UserRole.ADMIN))
+    @UseGuards(JwtRolesGuard(UserRole.COMPANY))
     @ApiOperation({ 
         summary: 'Create new brand [POST /api/v1/brand/create]',
         description: 'Create a new brand with initial field information. Only company administrators can create brands.' 
     })
     @ApiBody({
-        type: BrandInfoDto,
+        type: CreateBrandDto,
         description: 'Brand information including name, description, contact details, and initial field configuration',
         required: true,
         schema: {
@@ -92,7 +92,7 @@ export class BrandManagementController {
         type: BaseSerializer
     })
     async createBrand(
-        @Body() brandInfo: BrandInfoDto,
+        @Body() brandInfo: CreateBrandDto,
         @Req() request
     ) {
         const { data, error } = await this.brandManagementService.createBrandService(brandInfo, request.user);
@@ -208,6 +208,83 @@ export class BrandManagementController {
     })
     async listBrands() {
         const { data, error } = await this.brandManagementService.listBrandsService();
+        if (error) {
+            return new BaseSerializer(
+                HttpStatus.NOT_FOUND,
+                false,
+                error,
+                data,
+                [error]
+            )
+        } else {
+            return new BaseSerializer(
+                HttpStatus.OK,
+                true,
+                ApiResponseMessages.SUCCESS,
+                data,
+                error
+            );
+        };
+    }
+
+    @Post('approve')
+    @Roles(UserRole.ADMIN)
+    @ApiBearerAuth('access-token')
+    @ApiOperation(
+        {
+            summary: 'Approve brand [POST /api/v1/brand/approve]',
+            description: 'Approve a brand request. Only admin can approve brands.' 
+        }
+    )
+    @ApiParam(
+        {
+            name: 'brandId',
+            description: 'Unique identifier of the brand',
+            type: 'number',
+            required: true
+        }
+    )
+    @ApiResponse({ 
+        status: 200, 
+        description: 'Brand approved successfully',
+        schema: {
+            allOf: [
+                { $ref: '#/components/schemas/BaseSerializer' },
+                {
+                    properties: {
+                        data: {
+                            type: 'object',
+                            properties: {
+                                id: { type: 'number', example: 1 },
+                                name: { type: 'string', example: 'Premier Sports' },
+                                status: { type: 'number', example: 1 }
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    })
+    @ApiResponse({
+        status: 401,
+        description: 'Unauthorized - Invalid or missing token',
+        type: BaseSerializer
+    })
+    @ApiResponse({
+        status: 403,
+        description: 'Forbidden - User is not an admin',
+        type: BaseSerializer
+    })
+    @ApiResponse({
+        status: 404,
+        description: 'Brand not found',
+        type: BaseSerializer
+    })
+    async approveBrand(
+        @Body('brandId') brandId: number,
+        @Req() req
+    ) {
+        const { data, error } = await this.brandManagementService.approveABrandService(brandId, req.user);
         if (error) {
             return new BaseSerializer(
                 HttpStatus.NOT_FOUND,
@@ -379,7 +456,7 @@ export class BrandManagementController {
         required: true
     })
     @ApiBody({
-        type: BrandInfoDto,
+        type: CreateBrandDto,
         description: 'Updated brand information',
         required: true,
         schema: {
@@ -437,7 +514,7 @@ export class BrandManagementController {
     })
     async updateBrand(
         @Param('brandId') brandId: number,
-        @Body() updateInfo: BrandInfoDto,
+        @Body() updateInfo: CreateBrandDto,
         @Req() req
     ) {
         const { data, error } = await this.brandManagementService.updateBrandService(brandId, updateInfo, req.user);

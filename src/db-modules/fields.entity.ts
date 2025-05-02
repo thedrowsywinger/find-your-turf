@@ -46,9 +46,12 @@ export class Fields {
   @Column('decimal', { precision: 3, scale: 2, default: 0 })
   averageRating: number;
 
-  @ManyToOne(() => Brands)
+  @ManyToOne(() => Brands, b => b.fields)
   @JoinColumn({ name: 'brandId' })
-  brandId: Brands;
+  brand: Brands;
+
+  @Column()
+  brandId: number;
 
   @OneToMany(() => FieldSchedules, schedule => schedule.fieldId)
   fieldSchedules: FieldSchedules[];

@@ -37,6 +37,13 @@ export enum ApiResponseMessages {
     SCHEDULE_OVERLAP = 'Schedule overlaps with existing schedule',
     SCHEDULE_OUTSIDE_FIELD_HOURS = 'Schedule is outside field operating hours',
     INVALID_DAY_OF_WEEK = 'Invalid day of week provided',
-    NO_SCHEDULE_AVAILABLE = 'No schedule available for the selected time'
+    NO_SCHEDULE_AVAILABLE = 'No schedule available for the selected time',
+
+    BRAND_NOT_FOUND = 'Brand not found',
+    BRAND_CREATION_FAILED = 'Failed to create brand',
+    BRAND_UPDATE_FAILED = 'Failed to update brand',
+    BRAND_DELETION_FAILED = 'Failed to delete brand',
+    BRAND_ALREADY_EXISTS = 'Brand already exists',
+    BRAND_ALREADY_APPROVED = 'Brand already approved',
 
 }

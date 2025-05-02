@@ -49,11 +49,11 @@ export class FieldInfoDto {
     sportType: SportType;
 
     @ApiProperty({
-        description: 'ID of the brand/company that owns the field',
-        example: 1
+        description: 'code of the brand/company that owns the field',
+        example: ""
     })
-    @IsNumber()
-    brandId: number;
+    @IsString()
+    brandId: string;
 
     @ApiProperty({
         description: 'Array of pricing configurations for different durations',

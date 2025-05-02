@@ -189,7 +189,7 @@ export class FieldManagementController {
         }
     })
     async createField(@Body() fieldInfo: FieldInfoDto, @Req() req): Promise<BaseSerializer> {
-        const { data, error } = await this.fieldManagementService.addFieldsService(fieldInfo);
+        const { data, error } = await this.fieldManagementService.addFieldsService(fieldInfo, req.user);
         if (error) {
             return new BaseSerializer(
                 HttpStatus.BAD_REQUEST,

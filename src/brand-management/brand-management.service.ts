@@ -4,7 +4,8 @@ import { ApiResponseMessages } from 'src/common/api-response-messages';
 import { Brands } from 'src/db-modules/brands.entity';
 import { Fields } from 'src/db-modules/fields.entity';
 import { DataSource, Repository } from 'typeorm';
-import { BrandInfoDto } from './dto/brand-info.dto';
+import { CreateBrandDto } from './dto/brand-info.dto';
+import { Users } from '../db-modules/users.entity';
 
 @Injectable()
 export class BrandManagementService {
@@ -14,37 +15,73 @@ export class BrandManagementService {
         @InjectRepository(Brands)
         private readonly brandRepository: Repository<Brands>,
         @InjectRepository(Fields)
-        private readonly fieldRepository: Repository<Fields>
+        private readonly fieldRepository: Repository<Fields>,
+        @InjectRepository(Users)
+        private readonly userRepository: Repository<Users>,
     ) { }
 
-    async createBrandService(brandInfo, user): Promise<any> {
-        brandInfo['createdBy'] = user.id;
+    /**
+     * Creates a brand + its initial fields, all in one transaction.
+     */
+    async createBrandService(
+        dto: CreateBrandDto,
+        user: Users,
+    ): Promise<{ data: Brands; error: string | null }> {
+        const qr = this.dataSource.createQueryRunner();
+        await qr.connect();
+        await qr.startTransaction();
 
-        // Check if the brand already exists
-        const existingBrand = await this.brandRepository.findOne({
-            where: { name: brandInfo.name }
-        });
-        if (existingBrand) {
-            return { data: null, error: 'Brand already exists' };
-        };
-
-        const newBrand = await this.brandRepository.save(brandInfo);
-        if (newBrand) return { data: newBrand, error: null };
-        else return { data: null, error: ApiResponseMessages.SYSTEM_ERROR };
-    };
-
-    async listBrandsService(): Promise<any> {
         try {
-            const brands = await this.brandRepository.find({
-                // relations: ['fields'],
-                where: { status: 1 }
+
+            const brandEntity = qr.manager.create(Brands, {
+                name: dto.name,
+                description: dto.description ?? null,
+                contactEmail: dto.contactEmail,
+                contactPhone: dto.contactPhone,
+                fullAddress: dto.fullAddress,
+                street: dto.street,
+                city: dto.city,
+                state: dto.state,
+                postalCode: dto.postalCode,
+                country: dto.country,
+                status: 0,
+                createdBy: user.id,
             });
-            return { data: brands, error: null };
-        } catch (error) {
-            console.error('Error listing brands:', error);
-            return { data: null, error: ApiResponseMessages.SYSTEM_ERROR };
+            const savedBrand = await qr.manager.save(Brands, brandEntity);
+
+            // // 3) Map each FieldInfoDto to a Fields entity, linking to savedBrand.id
+            // const fieldsToSave = dto.fields.map((f) =>
+            //     // @ts-ignore
+            //     qr.manager.create(Fields, {
+            //         name: f.name,
+            //         address: f.address,
+            //         city: f.city,
+            //         country: f.country,
+            //         description: f.description,
+            //         sportType: f.sportType,
+            //         brandId: savedBrand.id,
+            //         createdBy: user.id,
+            //     }),
+            // );
+            // const savedFields = await qr.manager.save(Fields, fieldsToSave);
+
+            // 4) Attach the newly created fields onto the returned brand object
+            // ; (savedBrand as any).fields = savedFields;
+
+            // 5) Commit & return
+            await qr.commitTransaction();
+            return { data: savedBrand, error: null };
+        } catch (err: any) {
+            await qr.rollbackTransaction();
+            console.error('Error in createBrandService:', err);
+            return {
+                data: null,
+                error: err.message || ApiResponseMessages.SYSTEM_ERROR,
+            };
+        } finally {
+            await qr.release();
         }
-    }
+    };
 
     async getBrandDetailsService(brandId: number): Promise<any> {
         try {
@@ -64,7 +101,7 @@ export class BrandManagementService {
         }
     }
 
-    async updateBrandService(brandId: number, updateInfo: BrandInfoDto, user: any): Promise<any> {
+    async updateBrandService(brandId: number, updateInfo: CreateBrandDto, user: any): Promise<any> {
         try {
             const brand = await this.brandRepository.findOne({
                 where: { id: brandId, status: 1 }
@@ -121,5 +158,49 @@ export class BrandManagementService {
         } finally {
             await queryRunner.release();
         }
+    }
+
+    async listBrandsService(): Promise<any> {
+        try {
+
+            let allBrands = {};
+
+            const activeBrands = await this.brandRepository.find({
+                where: { status: 1 },
+                // relations: ['fields'],
+            });
+            const inactiveBrands = await this.brandRepository.find({
+                where: { status: 0 },
+                // relations: ['fields'],
+            });
+            allBrands = {
+                activeBrands: activeBrands,
+                inactiveBrands: inactiveBrands,
+            };
+            return { data: allBrands, error: null };
+        } catch (error) {
+            console.error('Error listing brands:', error);
+            return { data: null, error: ApiResponseMessages.SYSTEM_ERROR };
+        }
+    }
+
+    /**
+     * TODO: Serialize the response
+     */
+    async approveABrandService(brandId: number, user: any): Promise<any> {
+        const brand = await this.brandRepository.findOne({
+            where: { id: brandId }
+        });
+        if (!brand) return { data: null, error: ApiResponseMessages.BRAND_NOT_FOUND };
+        
+        if (brand.status === 1) return { data: null, error: ApiResponseMessages.BRAND_ALREADY_APPROVED };
+
+        brand.status = 1;
+        brand.updatedBy = user.id;
+        brand.updatedAt = new Date();
+        const updatedBrand = await this.brandRepository.save(brand);
+        if (!updatedBrand) return { data: null, error: ApiResponseMessages.BRAND_UPDATE_FAILED };
+
+        return { data: updatedBrand, error: null };
     }
 }

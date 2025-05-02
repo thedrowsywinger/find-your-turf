@@ -1,5 +1,6 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { v4 } from 'uuid';
+import { Fields } from './fields.entity';
 
 @Entity({ name: 'brands' })
 export class Brands {
@@ -22,6 +23,18 @@ export class Brands {
   contactPhone: string;
 
   @Column({ length: 255, nullable: false })
+  country: string;
+
+  @Column({ length: 255, nullable: false })
+  city: string;
+
+  @Column({ length: 255, nullable: true })
+  street: string;
+
+  @Column({ length: 255, nullable: true })
+  postalCode: string;
+
+  @Column({ length: 255, nullable: false })
   fullAddress: string;
 
   @Column({ default: 1 })
@@ -30,7 +43,7 @@ export class Brands {
   @Column()
   createdBy: number;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP'})
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;
 
   @Column({ nullable: true })
@@ -38,4 +51,8 @@ export class Brands {
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   updatedAt: Date;
+
+  @OneToMany(() => Fields, field => field.brand, { cascade: ['insert'] })
+  fields: Fields[];
+
 }
