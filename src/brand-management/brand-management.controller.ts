@@ -421,7 +421,7 @@ export class BrandManagementController {
         description: 'Brand not found',
         type: BaseSerializer
     })
-    async getBrandDetails(@Param('brandId') brandId: number) {
+    async getBrandDetails(@Param('brandId') brandId: string) {
         const { data, error } = await this.brandManagementService.getBrandDetailsService(brandId);
         if (error) {
             return new BaseSerializer(

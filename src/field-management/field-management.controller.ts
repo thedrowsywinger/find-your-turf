@@ -217,12 +217,12 @@ export class FieldManagementController {
         summary: 'Add field schedule [POST /api/v1/field/{fieldId}/schedules]', 
         description: 'Add a new schedule slot for a field' 
     })
-    @ApiParam({ name: 'fieldId', type: 'number', description: 'ID of the field' })
+    @ApiParam({ name: 'fieldId', type: 'string', description: 'ID of the field' })
     @ApiResponse({ status: 201, description: 'Schedule created successfully' })
     @ApiResponse({ status: 400, description: 'Invalid input' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     async addFieldSchedule(
-        @Param('fieldId', ParseIntPipe) fieldId: number,
+        @Param('fieldId') fieldId: string,
         @Body() scheduleDto: FieldScheduleDto,
         @Req() req,
     ): Promise<BaseSerializer> {
@@ -258,7 +258,7 @@ export class FieldManagementController {
         description: 'Update an existing schedule for a field' 
     })
     async updateFieldSchedule(
-        @Param('fieldId', ParseIntPipe) fieldId: number,
+        @Param('fieldId') fieldId: string,
         @Body() updateDto: UpdateFieldScheduleDto,
         @Req() req,
     ): Promise<BaseSerializer> {
@@ -292,7 +292,7 @@ export class FieldManagementController {
     })
     @ApiParam({ 
         name: 'fieldId', 
-        type: 'number', 
+        type: 'string', 
         description: 'ID of the field to get schedules for' 
     })
     @ApiResponse({ 
@@ -352,7 +352,7 @@ export class FieldManagementController {
         }
     })
     async getFieldSchedules(
-        @Param('fieldId', ParseIntPipe) fieldId: number,
+        @Param('fieldId') fieldId: string,
     ): Promise<BaseSerializer> {
         const { data, error } = await this.fieldManagementService.getFieldSchedules(fieldId);
         if (error) {
@@ -382,7 +382,7 @@ export class FieldManagementController {
         description: 'Remove a schedule from a field' 
     })
     async deleteFieldSchedule(
-        @Param('fieldId', ParseIntPipe) fieldId: number,
+        @Param('fieldId') fieldId: string,
         @Param('scheduleId', ParseIntPipe) scheduleId: number,
         @Req() req,
     ): Promise<BaseSerializer> {
@@ -414,7 +414,7 @@ export class FieldManagementController {
         summary: 'Check field availability [GET /api/v1/field/{fieldId}/availability]', 
         description: 'Check if a field is available at a specific date and time' 
     })
-    @ApiParam({ name: 'fieldId', type: 'number', description: 'ID of the field' })
+    @ApiParam({ name: 'fieldId', type: 'string', description: 'ID of the field' })
     @ApiQuery({ 
         name: 'date', 
         required: true, 
@@ -441,7 +441,7 @@ export class FieldManagementController {
     })
     @ApiResponse({ status: 400, description: 'Invalid date format' })
     async checkFieldAvailability(
-        @Param('fieldId', ParseIntPipe) fieldId: number,
+        @Param('fieldId') fieldId: string,
         @Query('date') dateStr: string,
     ): Promise<BaseSerializer> {
         const date = new Date(dateStr);
@@ -472,12 +472,12 @@ export class FieldManagementController {
         summary: 'Create field review [POST /api/v1/field/{fieldId}/reviews]', 
         description: 'Submit a review for a field after booking' 
     })
-    @ApiParam({ name: 'fieldId', type: 'number', description: 'ID of the field' })
+    @ApiParam({ name: 'fieldId', type: 'string', description: 'ID of the field' })
     @ApiResponse({ status: 201, description: 'Review created successfully' })
     @ApiResponse({ status: 400, description: 'Invalid input or duplicate review' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     async createReview(
-        @Param('fieldId', ParseIntPipe) fieldId: number,
+        @Param('fieldId') fieldId: string,
         @Body() reviewDto: CreateFieldReviewDto,
         @Req() req,
     ): Promise<BaseSerializer> {
@@ -549,7 +549,7 @@ export class FieldManagementController {
         summary: 'Get field reviews [GET /api/v1/field/{fieldId}/reviews]', 
         description: 'Retrieve paginated reviews for a specific field including ratings, comments, and responses' 
     })
-    @ApiParam({ name: 'fieldId', type: 'number', description: 'ID of the field' })
+    @ApiParam({ name: 'fieldId', type: 'string', description: 'ID of the field' })
     @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number', example: 1 })
     @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page', example: 10 })
     @ApiQuery({ 
@@ -644,7 +644,7 @@ export class FieldManagementController {
         }
     })
     async getFieldReviews(
-        @Param('fieldId', ParseIntPipe) fieldId: number,
+        @Param('fieldId') fieldId: string,
         @Query('page') page: number = 1,
         @Query('limit') limit: number = 10,
     ): Promise<BaseSerializer> {
@@ -684,7 +684,7 @@ export class FieldManagementController {
     })
     @ApiParam({ 
         name: 'fieldId', 
-        type: 'number', 
+        type: 'string', 
         description: 'ID of the field to update pricing for' 
     })
     @ApiResponse({ 
@@ -700,7 +700,7 @@ export class FieldManagementController {
     @ApiResponse({ status: 403, description: 'Forbidden - User does not have required role' })
     @ApiResponse({ status: 404, description: 'Field not found' })
     async updateFieldPricing(
-        @Param('fieldId') fieldId: number,
+        @Param('fieldId') fieldId: string,
         @Body() fieldInfo: UpdateFieldPricingDto,
         @Request() req,
     ) {
@@ -742,7 +742,7 @@ export class FieldManagementController {
     })
     @ApiResponse({ status: 404, description: 'Field not found' })
     async getFieldPricing(
-        @Param('fieldId', ParseIntPipe) fieldId: number
+        @Param('fieldId') fieldId: string
     ) {
         const field = await this.fieldManagementService.getFieldDetails(fieldId);
         return { pricing: field.pricing };

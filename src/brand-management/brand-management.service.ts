@@ -83,11 +83,11 @@ export class BrandManagementService {
         }
     };
 
-    async getBrandDetailsService(brandId: number): Promise<any> {
+    async getBrandDetailsService(brandId: string): Promise<any> {
         try {
             const brand = await this.brandRepository.findOne({
                 relations: ['fields'],
-                where: { id: brandId, status: 1 }
+                where: { code: brandId, status: 1 }
             });
 
             if (!brand) {
