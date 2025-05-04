@@ -6,6 +6,7 @@ import { Fields } from 'src/db-modules/fields.entity';
 import { DataSource, Repository } from 'typeorm';
 import { CreateBrandDto } from './dto/brand-info.dto';
 import { Users } from '../db-modules/users.entity';
+import { error } from 'console';
 
 @Injectable()
 export class BrandManagementService {
@@ -83,7 +84,7 @@ export class BrandManagementService {
         }
     };
 
-    async getBrandDetailsService(brandId: string): Promise<any> {
+    async getBrandDetailsForAdminService(brandId: string): Promise<any> {
         try {
             const brand = await this.brandRepository.findOne({
                 relations: ['fields'],
@@ -93,6 +94,22 @@ export class BrandManagementService {
             if (!brand) {
                 return { data: null, error: 'Brand not found' };
             }
+
+            return { data: brand, error: null };
+        } catch (error) {
+            console.error('Error getting brand details:', error);
+            return { data: null, error: ApiResponseMessages.SYSTEM_ERROR };
+        }
+    }
+
+    async getBrandDetailsService(req: any): Promise<any> {
+        try {
+            const brand = await this.brandRepository.findOne({
+                relations: ['fields'],
+                where: { createdBy: req.user.id, status: 1 }
+            });
+
+            if (!brand) return { data: null, error: 'Brand not found' };
 
             return { data: brand, error: null };
         } catch (error) {
