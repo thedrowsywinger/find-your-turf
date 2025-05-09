@@ -9,6 +9,9 @@ FindYourTurf is a NestJS-based backend application that provides APIs for managi
 - JWT-based authentication with role-based access control
 - Field management system with scheduling capabilities
 - Brand/Company management for facility owners
+  - One-to-one relationship between company users and brands
+  - Each company user can create and maintain only one brand
+  - All fields created by a user are automatically associated with their brand
 - Field search with multiple filtering options
 - Review and rating system for fields
 - Booking management
@@ -16,20 +19,30 @@ FindYourTurf is a NestJS-based backend application that provides APIs for managi
 - Staff management system
 
 #### Available Roles
-1. **Facility Manager**
+1. **Company**
+   - Can create and manage exactly one brand
+   - Full access to their own facility management
+   - Can create and manage fields under their brand
+
+2. **Facility Manager**
    - Full access to facility management
    - Can manage schedules, pricing, and staff
    - Can view reports and analytics
 
-2. **Maintenance Staff**
+3. **Maintenance Staff**
    - Can update facility schedules
    - Limited access to facility management
 
-3. **Customer Service**
+4. **Customer Service**
    - Can manage bookings
    - Can respond to reviews
    - Can access reports
    - Cannot modify facility settings
+
+5. **Consumer**
+   - Can search and book facilities
+   - Can leave reviews
+   - Can manage their bookings
 
 #### Default Permissions by Role
 
@@ -62,6 +75,41 @@ FindYourTurf is a NestJS-based backend application that provides APIs for managi
   - User agent
   - Detailed changes
   - Success/failure status
+
+### API Paths
+All API endpoints are prefixed with `/api/v1/`. For example, a field listing endpoint would be:
+- `/api/v1/field/list`
+
+The Swagger documentation is available at:
+- `/api/docs`
+
+### Brand-User Relationship
+- Each company user can only have one brand
+- The relationship is managed via a one-to-one relationship in the database
+- When a company user creates a brand, it's automatically associated with their user account
+- All fields created by the user are automatically associated with their brand
+- A user cannot create or manage fields for brands they don't own
+
+### Field Management
+- Fields are always associated with a brand
+- When creating fields, the system automatically assigns them to the user's brand
+- The brandId field in the field creation DTO is optional and will default to the user's brand
+- Users cannot create fields without first creating a brand
+- The field management service validates that users can only manage fields under their own brand
+- Fields include detailed information such as:
+  - Name, address, and location
+  - Sport type (football, cricket, basketball, etc.)
+  - Pricing configurations for different time durations
+  - Facilities and amenities
+  - Description and images
+
+#### Supported Sport Types
+The system currently supports the following sport types for fields:
+- Football
+- Cricket
+- Basketball
+- Table Tennis
+- Other (for any sport not explicitly listed)
 
 ### Advanced Scheduling Features
 
@@ -103,12 +151,21 @@ All API endpoints return responses in a standardized format:
 
 ### Security Features
 - JWT-based authentication
-- Role-based access control (COMPANY, CONSUMER, ADMIN)
+- Role-based access control (ADMIN, COMPANY, CONSUMER, FACILITY_MANAGER, MAINTENANCE_STAFF, CUSTOMER_SERVICE)
 - Rate limiting:
   - Default: 100 requests per minute
   - Auth endpoints: 5 requests per minute
 - Request validation and sanitization
 - Secure error handling and logging
+
+### API Documentation
+The application includes comprehensive API documentation via Swagger:
+- Available at `/api/docs`
+- Includes all endpoints, request/response models, and authentication requirements
+- Supports testing endpoints directly from the documentation
+- Organized by tags: auth, fields, bookings, users, brands, reviews, admin
+- Bearer token authentication for protected endpoints
+- Refresh token cookie authentication for token refresh
 
 🔒 - Requires authentication
 ---
@@ -124,7 +181,7 @@ The purpose of this document is to specify the backend requirements for a field-
 - **Admin Panel:** For super admins to manage the overall system, including user management, bookings, content moderation, and system configuration.
 
 ### 1.2. Background and Context
-Inspired by the JWT security narrative presented in the “Scoring Goals Securely” article, this project requires robust, secure authentication and authorization processes. JWTs will be used to manage access across different panels, ensuring that:
+Inspired by the JWT security narrative presented in the "Scoring Goals Securely" article, this project requires robust, secure authentication and authorization processes. JWTs will be used to manage access across different panels, ensuring that:
 - Users (companies, consumers, admin) are securely authenticated.
 - Tokens are signed, issued, and verified following best practices.
 - Refresh token strategies are implemented to allow seamless user experiences.
@@ -134,7 +191,7 @@ Inspired by the JWT security narrative presented in the “Scoring Goals Securel
 ## 2. Project Vision & Objectives
 
 ### 2.1. Vision
-To create a secure and scalable backend system for “FindYourTurf” that provides an intuitive API for booking sports facilities. The system will serve as the backbone for a multi-panel application with tailored functionality for facility providers, end users, and administrators.
+To create a secure and scalable backend system for "FindYourTurf" that provides an intuitive API for booking sports facilities. The system will serve as the backbone for a multi-panel application with tailored functionality for facility providers, end users, and administrators.
 
 ### 2.2. Objectives
 - **Secure Authentication & Authorization:** Implement JWT authentication (using best practices such as RS256 where applicable) with a robust refresh token mechanism to maintain secure, long-lived sessions.
@@ -332,15 +389,9 @@ To create a secure and scalable backend system for “FindYourTurf” that provi
 - **API:** Application Programming Interface.
 
 ### 12.2. References
-- **JWT Best Practices & Secure Storage:** Refer to the “Scoring Goals Securely: The JWT Playbook in 'FindYourTurf'” article by Abdullah Md. Sarwar cite4.
+- **JWT Best Practices & Secure Storage:** Refer to the "Scoring Goals Securely: The JWT Playbook in 'FindYourTurf'" article by Abdullah Md. Sarwar cite4.
 - **TypeORM Documentation:** [https://typeorm.io](https://typeorm.io)
 - **NestJS Documentation:** [https://docs.nestjs.com](https://docs.nestjs.com)
-
----
-
-## 13. Conclusion
-
-This PRD outlines a secure, maintainable, and scalable backend architecture for a field-booking application. By leveraging NestJS, TypeORM, and PostgreSQL, along with robust JWT authentication practices, “FindYourTurf” will offer a seamless experience across all user roles while ensuring data integrity and strong security. This document serves as the foundation for subsequent design, development, and deployment phases.
 
 ---
 

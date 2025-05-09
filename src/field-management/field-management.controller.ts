@@ -128,7 +128,7 @@ export class FieldManagementController {
     @ApiBearerAuth('access-token')
     @ApiOperation({ 
         summary: 'Create a new field',
-        description: 'Create a new sports facility with detailed information including location, pricing, and sport type. Requires company or facility manager role with facility modification permissions.' 
+        description: 'Create a new sports facility with detailed information including location, pricing, and sport type. Fields are automatically assigned to the user\'s brand. Requires company or facility manager role with facility modification permissions.' 
     })
     @ApiBody({
         type: FieldInfoDto,
@@ -154,7 +154,7 @@ export class FieldManagementController {
                                 country: { type: 'string', example: 'Sportland' },
                                 sportType: { type: 'string', enum: Object.values(SportType), example: 'FOOTBALL' },
                                 pricePerHour: { type: 'number', example: 100 },
-                                brandId: { type: 'string', example: '1' },
+                                brandId: { type: 'number', example: 1 },
                                 status: { type: 'number', example: 1 },
                                 createdBy: { type: 'number', example: 5 },
                                 createdAt: { type: 'string', format: 'date-time' }
@@ -180,7 +180,7 @@ export class FieldManagementController {
                         errors: { 
                             type: 'array', 
                             items: { type: 'string' },
-                            example: ['Invalid sport type', 'Brand not found']
+                            example: ['You must create a brand before adding fields', 'Invalid sport type']
                         }
                     }
                 }

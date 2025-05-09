@@ -22,7 +22,7 @@ export class BrandManagementController {
     @UseGuards(JwtRolesGuard(UserRole.COMPANY))
     @ApiOperation({ 
         summary: 'Create new brand [POST /api/v1/brand/create]',
-        description: 'Create a new brand with initial field information. Only company administrators can create brands.' 
+        description: 'Create a new brand. Only company administrators can create brands. Each company user can have only one brand.' 
     })
     @ApiBody({
         type: CreateBrandDto,
@@ -75,6 +75,28 @@ export class BrandManagementController {
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+            ]
+        }
+    })
+    @ApiResponse({ 
+        status: 400, 
+        description: 'Bad request - User already has a brand',
+        schema: {
+            allOf: [
+                { $ref: '#/components/schemas/BaseSerializer' },
+                {
+                    properties: {
+                        statusCode: { type: 'number', example: 400 },
+                        success: { type: 'boolean', example: false },
+                        message: { type: 'string', example: 'Company user can only have one brand' },
+                        data: { type: 'null', example: null },
+                        errors: { 
+                            type: 'array', 
+                            items: { type: 'string' },
+                            example: ['Company user can only have one brand']
                         }
                     }
                 }

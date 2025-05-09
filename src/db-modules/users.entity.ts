@@ -1,5 +1,6 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn, OneToOne, JoinColumn } from 'typeorm';
 import { v4 } from 'uuid';
+import { Brands } from './brands.entity';
 
 export enum UserRole {
   ADMIN = 'admin',
@@ -47,6 +48,13 @@ export class Users {
 
   @Column({ nullable: true })
   parentUserId: number;
+
+  @OneToOne(() => Brands, { nullable: true })
+  @JoinColumn({ name: 'brandId' })
+  brand: Brands;
+
+  @Column({ nullable: true })
+  brandId: number;
 
   @Column({ nullable: true })
   refreshToken: string;

@@ -7,6 +7,7 @@ import { FieldPricing } from 'src/db-modules/field-pricing.entity';
 import { Bookings, BookingStatus } from 'src/db-modules/bookings.entity';
 import { FieldSchedules, DayOfWeek, RecurrenceType } from 'src/db-modules/field-schedules.entity';
 import { FieldReviews } from 'src/db-modules/field-reviews.entity';
+import { Users } from 'src/db-modules/users.entity';
 import { Repository, Between, LessThanOrEqual, MoreThanOrEqual, Not, In } from 'typeorm';
 import { FieldInfoDto } from './dto/field-info.dto';
 import { ListFieldFilterQueryDto } from './dto/list-field-query.dto';
@@ -33,6 +34,8 @@ export class FieldManagementService {
         private readonly fieldScheduleRepository: Repository<FieldSchedules>,
         @InjectRepository(FieldReviews)
         private readonly fieldReviewRepository: Repository<FieldReviews>,
+        @InjectRepository(Users)
+        private readonly userRepository: Repository<Users>,
         private readonly loggingService: LoggingService,
         private readonly notificationService: NotificationService,
     ) {}
@@ -218,25 +221,41 @@ export class FieldManagementService {
     }
 
     async addFieldsService(body: FieldInfoDto, user): Promise<any> {
-        let brand: Brands | undefined = await this.brandRepository.findOne({ where: { code: body.brandId } });
-        if (!brand) return { data: null, error: ApiResponseMessages.INVALID_BRAND };
-        if (brand.status === 0) return { data: null, error: ApiResponseMessages.BRAND_IS_INACTIVE }; 
- 
-        const code = v4();
         try {
+            // Get the user with their brand information
+            const userData = await this.userRepository.findOne({
+                where: { id: user.id },
+                relations: ['brand']
+            });
+
+            if (!userData || !userData.brandId) {
+                return { data: null, error: "You must create a brand before adding fields" };
+            }
+
+            // Find the user's brand
+            const brand = await this.brandRepository.findOne({ where: { id: userData.brandId } });
+            if (!brand) {
+                return { data: null, error: ApiResponseMessages.INVALID_BRAND };
+            }
+            
+            if (brand.status === 0) {
+                return { data: null, error: ApiResponseMessages.BRAND_IS_INACTIVE }; 
+            }
+ 
+            const code = v4();
             console.log({
                 ...body,
                 brandId: brand.id
-            })
+            });
+
             const fieldData = {
                 ...body,
                 code,
-                // brand: brand,
                 brandId: brand.id,
-                // brandId: { id: brand.id }, // Properly reference the brand
                 createdBy: user.id,
                 createdAt: new Date(),
             };
+
             // @ts-ignore
             await this.fieldRepository.save(fieldData);
             let newField = await this.fieldRepository.findOne({ where: { code } }); 

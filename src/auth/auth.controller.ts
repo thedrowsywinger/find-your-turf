@@ -17,7 +17,7 @@ export class AuthController {
   @Post('/register')
   @AuthRateLimit()
   @ApiOperation({ 
-    summary: 'Register new user', 
+    summary: 'Register new user [POST /api/v1/auth/register]', 
     description: 'Create a new user account with role-based access'
   })
   @ApiBody({
@@ -167,7 +167,7 @@ export class AuthController {
   @Post('/refresh')
   @AuthRateLimit()
   @ApiOperation({ 
-    summary: 'Refresh access token', 
+    summary: 'Refresh access token [POST /api/v1/auth/refresh]', 
     description: 'Get new access token using refresh token stored in HTTP-only cookie'
   })
   @ApiCookieAuth('refreshToken')

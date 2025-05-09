@@ -10,6 +10,7 @@ import { FieldReviews } from 'src/db-modules/field-reviews.entity';
 import { LoggingModule } from '../common/logging/logging.module';
 import { NotificationModule } from '../common/notifications/notification.module';
 import { FieldPricing } from '../db-modules/field-pricing.entity';
+import { Users } from '../db-modules/users.entity';
 
 @Module({
   imports: [
@@ -19,7 +20,8 @@ import { FieldPricing } from '../db-modules/field-pricing.entity';
       Bookings,
       FieldSchedules,
       FieldReviews,
-      FieldPricing
+      FieldPricing,
+      Users
     ]),
     LoggingModule,
     NotificationModule

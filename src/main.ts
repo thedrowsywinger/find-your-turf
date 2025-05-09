@@ -68,6 +68,9 @@ async function bootstrap() {
     },
   }));
 
+  // Apply global prefix to all routes
+  // Note: If using this approach, controllers should NOT include the 'api/v1' prefix
+  // in their @Controller() decorators as it would result in duplicate prefixes
   app.setGlobalPrefix('api/v1');
 
   await app.listen(PORT);

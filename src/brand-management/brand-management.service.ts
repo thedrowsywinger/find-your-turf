@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ApiResponseMessages } from 'src/common/api-response-messages';
 import { Brands } from 'src/db-modules/brands.entity';
 import { Fields } from 'src/db-modules/fields.entity';
 import { DataSource, Repository } from 'typeorm';
 import { CreateBrandDto } from './dto/brand-info.dto';
-import { Users } from '../db-modules/users.entity';
+import { Users, UserRole } from '../db-modules/users.entity';
 import { error } from 'console';
 
 @Injectable()
@@ -28,12 +28,27 @@ export class BrandManagementService {
         dto: CreateBrandDto,
         user: Users,
     ): Promise<{ data: Brands; error: string | null }> {
+        // Only company users can create brands
+        if (user.role !== UserRole.COMPANY) {
+            return { data: null, error: 'Only company users can create brands' };
+        }
+
+        // Check if the user already has a brand
+        const existingBrand = await this.userRepository.findOne({
+            where: { id: user.id },
+            relations: ['brand']
+        });
+
+        if (existingBrand && existingBrand.brandId) {
+            return { data: null, error: 'Company user can only have one brand' };
+        }
+
         const qr = this.dataSource.createQueryRunner();
         await qr.connect();
         await qr.startTransaction();
 
         try {
-
+            // Create the brand entity
             const brandEntity = qr.manager.create(Brands, {
                 name: dto.name,
                 description: dto.description ?? null,
@@ -49,6 +64,13 @@ export class BrandManagementService {
                 createdBy: user.id,
             });
             const savedBrand = await qr.manager.save(Brands, brandEntity);
+
+            // Update the user with the brand reference
+            await qr.manager.update(Users, user.id, {
+                brandId: savedBrand.id,
+                updatedAt: new Date(),
+                updatedBy: user.id
+            });
 
             // // 3) Map each FieldInfoDto to a Fields entity, linking to savedBrand.id
             // const fieldsToSave = dto.fields.map((f) =>
@@ -104,12 +126,25 @@ export class BrandManagementService {
 
     async getBrandDetailsService(req: any): Promise<any> {
         try {
-            const brand = await this.brandRepository.findOne({
-                relations: ['fields'],
-                where: { createdBy: req.user.id, status: 1 }
+            // Get the user with their brand information
+            const user = await this.userRepository.findOne({
+                where: { id: req.user.id },
+                relations: ['brand']
             });
 
-            if (!brand) return { data: null, error: 'Brand not found' };
+            if (!user || !user.brandId) {
+                return { data: null, error: 'User has no associated brand' };
+            }
+
+            // Get detailed brand information with fields
+            const brand = await this.brandRepository.findOne({
+                relations: ['fields'],
+                where: { id: user.brandId, status: 1 }
+            });
+
+            if (!brand) {
+                return { data: null, error: 'Brand not found' };
+            }
 
             return { data: brand, error: null };
         } catch (error) {
@@ -120,6 +155,21 @@ export class BrandManagementService {
 
     async updateBrandService(brandId: number, updateInfo: CreateBrandDto, user: any): Promise<any> {
         try {
+            // Get the user with their brand information
+            const userData = await this.userRepository.findOne({
+                where: { id: user.id },
+                relations: ['brand']
+            });
+
+            if (!userData || !userData.brandId) {
+                return { data: null, error: 'User has no associated brand' };
+            }
+
+            // Ensure user can only modify their own brand
+            if (userData.brandId !== brandId) {
+                return { data: null, error: 'You can only modify your own brand' };
+            }
+
             const brand = await this.brandRepository.findOne({
                 where: { id: brandId, status: 1 }
             });
@@ -141,6 +191,21 @@ export class BrandManagementService {
     }
 
     async deleteBrandService(brandId: number, user: any): Promise<any> {
+        // Get the user with their brand information
+        const userData = await this.userRepository.findOne({
+            where: { id: user.id },
+            relations: ['brand']
+        });
+
+        if (!userData || !userData.brandId) {
+            return { data: null, error: 'User has no associated brand' };
+        }
+
+        // Ensure user can only delete their own brand
+        if (userData.brandId !== brandId) {
+            return { data: null, error: 'You can only delete your own brand' };
+        }
+
         const queryRunner = this.dataSource.createQueryRunner();
         await queryRunner.connect();
         await queryRunner.startTransaction();
@@ -165,6 +230,13 @@ export class BrandManagementService {
             brand.updatedBy = user.id;
             brand.updatedAt = new Date();
             await queryRunner.manager.save(brand);
+
+            // Clear brandId from user
+            await queryRunner.manager.update(Users, user.id, {
+                brandId: null,
+                updatedAt: new Date(),
+                updatedBy: user.id
+            });
 
             await queryRunner.commitTransaction();
             return { data: true, error: null };
