@@ -12,7 +12,7 @@ import { CreateBrandDto } from './dto/brand-info.dto';
 @ApiTags('brands')
 @Controller('brand')
 @ApiBearerAuth('access-token')
-@UseGuards(JwtRolesGuard(UserRole.COMPANY, UserRole.ADMIN))
+// @UseGuards(JwtRolesGuard(UserRole.COMPANY, UserRole.ADMIN))
 @ApiExtraModels(BaseSerializer, CreateBrandDto)
 export class BrandManagementController {
     constructor(private readonly brandManagementService: BrandManagementService) {}
@@ -305,6 +305,7 @@ export class BrandManagementController {
     }
 
     @Get(':brandId')
+    @UseGuards(JwtRolesGuard(UserRole.ADMIN))
     @ApiBearerAuth('access-token')
     @ApiOperation({ 
         summary: 'Get brand details [GET /api/v1/brand/{brandId}]',
@@ -421,8 +422,141 @@ export class BrandManagementController {
         description: 'Brand not found',
         type: BaseSerializer
     })
-    async getBrandDetails(@Param('brandId') brandId: number) {
-        const { data, error } = await this.brandManagementService.getBrandDetailsService(brandId);
+    async getBrandDetailsForAdmin(@Param('brandId') brandId: string) {
+        const { data, error } = await this.brandManagementService.getBrandDetailsForAdminService(brandId);
+        if (error) {
+            return new BaseSerializer(
+                HttpStatus.NOT_FOUND,
+                false,
+                error,
+                data,
+                [error]
+            )
+        } else {
+            return new BaseSerializer(
+                HttpStatus.OK,
+                true,
+                ApiResponseMessages.SUCCESS,
+                data,
+                error
+            );
+        };
+    }
+
+    @Get('')
+    @ApiBearerAuth('access-token')
+    @UseGuards(JwtRolesGuard(UserRole.COMPANY))
+    @ApiOperation({ 
+        summary: 'Get brand details for a facility owner [GET /api/v1/brand/]',
+        description: 'Get comprehensive information about a specific brand including all fields, schedules, and analytics' 
+    })
+    @ApiResponse({ 
+        status: 200, 
+        description: 'Brand details retrieved successfully',
+        schema: {
+            allOf: [
+                { $ref: '#/components/schemas/BaseSerializer' },
+                {
+                    properties: {
+                        data: {
+                            type: 'object',
+                            properties: {
+                                id: { type: 'number', example: 1 },
+                                name: { type: 'string', example: 'Premier Sports' },
+                                description: { type: 'string', example: 'Premier sports facility' },
+                                code: { type: 'string', example: 'PRE001' },
+                                status: { type: 'number', example: 1 },
+                                contact: {
+                                    type: 'object',
+                                    properties: {
+                                        email: { type: 'string', example: 'contact@premiersports.com' },
+                                        phone: { type: 'string', example: '+1234567890' }
+                                    }
+                                },
+                                address: {
+                                    type: 'object',
+                                    properties: {
+                                        street: { type: 'string' },
+                                        city: { type: 'string' },
+                                        state: { type: 'string' },
+                                        postalCode: { type: 'string' },
+                                        country: { type: 'string' }
+                                    }
+                                },
+                                fields: {
+                                    type: 'array',
+                                    items: {
+                                        type: 'object',
+                                        properties: {
+                                            id: { type: 'number' },
+                                            name: { type: 'string' },
+                                            sportType: { type: 'string' },
+                                            status: { type: 'number' },
+                                            facilities: { 
+                                                type: 'array',
+                                                items: { type: 'string' }
+                                            },
+                                            pricing: {
+                                                type: 'array',
+                                                items: {
+                                                    type: 'object',
+                                                    properties: {
+                                                        duration: { type: 'number' },
+                                                        price: { type: 'number' }
+                                                    }
+                                                }
+                                            },
+                                            analytics: {
+                                                type: 'object',
+                                                properties: {
+                                                    totalBookings: { type: 'number' },
+                                                    averageRating: { type: 'number' },
+                                                    reviewCount: { type: 'number' }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                analytics: {
+                                    type: 'object',
+                                    properties: {
+                                        totalRevenue: { type: 'number' },
+                                        bookingsCount: { type: 'number' },
+                                        averageRating: { type: 'number' },
+                                        popularFields: {
+                                            type: 'array',
+                                            items: {
+                                                type: 'object',
+                                                properties: {
+                                                    fieldId: { type: 'number' },
+                                                    name: { type: 'string' },
+                                                    bookings: { type: 'number' }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                createdAt: { type: 'string', format: 'date-time' },
+                                updatedAt: { type: 'string', format: 'date-time' }
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    })
+    @ApiResponse({ 
+        status: 401, 
+        description: 'Unauthorized',
+        type: BaseSerializer
+    })
+    @ApiResponse({ 
+        status: 404, 
+        description: 'Brand not found',
+        type: BaseSerializer
+    })
+    async getBrandDetails(@Req() req) {
+        const { data, error } = await this.brandManagementService.getBrandDetailsService(req);
         if (error) {
             return new BaseSerializer(
                 HttpStatus.NOT_FOUND,

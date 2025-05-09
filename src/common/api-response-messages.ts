@@ -45,5 +45,6 @@ export enum ApiResponseMessages {
     BRAND_DELETION_FAILED = 'Failed to delete brand',
     BRAND_ALREADY_EXISTS = 'Brand already exists',
     BRAND_ALREADY_APPROVED = 'Brand already approved',
+    BRAND_IS_INACTIVE = "Your Brand is not approved yet. Please contact the admin for more information.",
 
 }

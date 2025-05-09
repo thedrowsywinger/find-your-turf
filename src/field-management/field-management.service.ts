@@ -190,61 +190,22 @@ export class FieldManagementService {
         }
     }
 
-    async createField(fieldInfo: FieldInfoDto, userId: number): Promise<Fields> {
-        // First create the field without pricing
-        // @ts-ignore
-        const field = this.fieldRepository.create({
-            name: fieldInfo.name,
-            address: fieldInfo.address,
-            city: fieldInfo.city,
-            country: fieldInfo.country,
-            description: fieldInfo.description,
-            sportType: fieldInfo.sportType,
-            brandId: { id: fieldInfo.brandId }, // Properly reference the brand
-            createdBy: userId,
-            status: 1
-        });
-        
-        const savedField = await this.fieldRepository.save(field);
-
-        if (fieldInfo.pricing && fieldInfo.pricing.length > 0) {
-            const pricingEntities = fieldInfo.pricing.map(pricing => 
-                this.fieldPricingRepository.create({
-                    // @ts-ignore
-                    fieldId: { id: savedField.id }, // Properly reference the field
-                    price: pricing.price,
-                    durationInMinutes: pricing.durationInMinutes,
-                    createdBy: userId,
-                    status: 1
-                })
-            );
-
-            await this.fieldPricingRepository.save(pricingEntities);
-        }
-
+    async getFieldDetails(id: string): Promise<Fields> {
         return this.fieldRepository.findOne({
-            // @ts-ignore
-            where: { id: savedField.id },
-            relations: ['pricing', 'brandId']
-        });
-    }
-
-    async getFieldDetails(id: number): Promise<Fields> {
-        return this.fieldRepository.findOne({
-            where: { id },
+            where: { code: id },
             relations: ['pricing', 'fieldSchedules', 'reviews'],
         });
     }
 
-    async updateFieldPricing(fieldId: number, pricing: FieldInfoDto['pricing'], userId: number): Promise<void> {
+    async updateFieldPricing(fieldId: string, pricing: FieldInfoDto['pricing'], userId: number): Promise<void> {
         // Delete existing pricing
-        await this.fieldPricingRepository.delete({ fieldId: { id: fieldId } });
+        await this.fieldPricingRepository.delete({ fieldId: { code: fieldId } });
 
         // Create new pricing entries
         if (pricing && pricing.length > 0) {
             const pricingEntities = pricing.map(price => 
                 this.fieldPricingRepository.create({
-                    fieldId: { id: fieldId },
+                    fieldId: { code: fieldId },
                     price: price.price,
                     durationInMinutes: price.durationInMinutes,
                     createdBy: userId,
@@ -259,7 +220,8 @@ export class FieldManagementService {
     async addFieldsService(body: FieldInfoDto, user): Promise<any> {
         let brand: Brands | undefined = await this.brandRepository.findOne({ where: { code: body.brandId } });
         if (!brand) return { data: null, error: ApiResponseMessages.INVALID_BRAND };
-
+        if (brand.status === 0) return { data: null, error: ApiResponseMessages.BRAND_IS_INACTIVE }; 
+ 
         const code = v4();
         try {
             console.log({
@@ -300,8 +262,8 @@ export class FieldManagementService {
         }
     }
 
-    async addFieldSchedule(fieldId: number, scheduleDto: FieldScheduleDto, userId: number) {
-        const field = await this.fieldRepository.findOne({ where: { id: fieldId } });
+    async addFieldSchedule(fieldId: string, scheduleDto: FieldScheduleDto, userId: number) {
+        const field = await this.fieldRepository.findOne({ where: { code: fieldId } });
         if (!field) {
             return { data: null, error: ApiResponseMessages.INVALID_FIELD };
         }
@@ -341,9 +303,9 @@ export class FieldManagementService {
         }
     }
 
-    async updateFieldSchedule(fieldId: number, updateDto: UpdateFieldScheduleDto, userId: number) {
+    async updateFieldSchedule(fieldId: string, updateDto: UpdateFieldScheduleDto, userId: number) {
         const schedule = await this.fieldScheduleRepository.findOne({
-            where: { id: updateDto.scheduleId, fieldId: { id: fieldId } },
+            where: { id: updateDto.scheduleId, fieldId: { code: fieldId } },
         });
 
         if (!schedule) {
@@ -384,10 +346,10 @@ export class FieldManagementService {
         }
     }
 
-    async getFieldSchedules(fieldId: number) {
+    async getFieldSchedules(fieldId: string) {
         try {
             const schedules = await this.fieldScheduleRepository.find({
-                where: { fieldId: { id: fieldId } },
+                where: { fieldId: { code: fieldId } },
                 order: { dayOfWeek: 'ASC', openTime: 'ASC' },
             });
 
@@ -398,9 +360,9 @@ export class FieldManagementService {
         }
     }
 
-    async deleteFieldSchedule(fieldId: number, scheduleId: number, userId: number) {
+    async deleteFieldSchedule(fieldId: string, scheduleId: number, userId: number) {
         const schedule = await this.fieldScheduleRepository.findOne({
-            where: { id: scheduleId, fieldId: { id: fieldId } },
+            where: { id: scheduleId, fieldId: { code: fieldId } },
         });
 
         if (!schedule) {
@@ -420,13 +382,13 @@ export class FieldManagementService {
         }
     }
 
-    async checkFieldAvailability(fieldId: number, date: Date) {
+    async checkFieldAvailability(fieldId: string, date: Date) {
         const dayOfWeek = format(date, 'EEEE').toLowerCase() as DayOfWeek;
         const timeStr = format(date, 'HH:mm:ss');
 
         const schedules = await this.fieldScheduleRepository.find({
             where: {
-                fieldId: { id: fieldId },
+                fieldId: { code: fieldId },
                 isAvailable: true,
                 status: 1,
             },
@@ -452,7 +414,7 @@ export class FieldManagementService {
             // Check existing bookings for this block
             const existingBooking = await this.bookingRepository.findOne({
                 where: {
-                    fieldId: { id: fieldId },
+                    fieldId: { code: fieldId },
                     status: BookingStatus.CONFIRMED,
                     startTime: LessThanOrEqual(date),
                     endTime: MoreThanOrEqual(date),
@@ -479,7 +441,7 @@ export class FieldManagementService {
         // Regular schedule check
         const existingBooking = await this.bookingRepository.findOne({
             where: {
-                fieldId: { id: fieldId },
+                fieldId: { code: fieldId },
                 status: BookingStatus.CONFIRMED,
                 startTime: LessThanOrEqual(date),
                 endTime: MoreThanOrEqual(date),
@@ -624,13 +586,13 @@ export class FieldManagementService {
         return true;
     }
 
-    async createFieldReview(fieldId: number, userId: number, reviewDto: CreateFieldReviewDto) {
+    async createFieldReview(fieldId: string, userId: number, reviewDto: CreateFieldReviewDto) {
         // Verify booking exists and belongs to the user
         const booking = await this.bookingRepository.findOne({
             where: {
                 id: reviewDto.bookingId,
                 userId: { id: userId },
-                fieldId: { id: fieldId },
+                fieldId: { code: fieldId },
                 status: BookingStatus.CONFIRMED
             }
         });
@@ -650,7 +612,7 @@ export class FieldManagementService {
 
         try {
             const review = this.fieldReviewRepository.create({
-                fieldId: { id: fieldId },
+                fieldId: { code: fieldId },
                 userId: { id: userId },
                 bookingId: { id: reviewDto.bookingId },
                 rating: reviewDto.rating,
@@ -660,12 +622,14 @@ export class FieldManagementService {
 
             const savedReview = await this.fieldReviewRepository.save(review);
 
+            const fieldInstance = await this.fieldRepository.findOne({where: { code: fieldId }});
+
             // Update field average rating
-            await this.updateFieldAverageRating(fieldId);
+            await this.updateFieldAverageRating(fieldInstance.id);
 
             // Get field and owner details for notification
             const field = await this.fieldRepository.findOne({
-                where: { id: fieldId },
+                where: { code: fieldId },
                 relations: ['brandId']
             });
 
@@ -730,10 +694,10 @@ export class FieldManagementService {
         }
     }
 
-    async getFieldReviews(fieldId: number, page = 1, limit = 10) {
+    async getFieldReviews(fieldId: string, page = 1, limit = 10) {
         try {
             const [reviews, total] = await this.fieldReviewRepository.findAndCount({
-                where: { fieldId: { id: fieldId }, status: 1 },
+                where: { fieldId: { code: fieldId }, status: 1 },
                 relations: ['userId', 'bookingId'],
                 order: { createdAt: 'DESC' },
                 skip: (page - 1) * limit,
