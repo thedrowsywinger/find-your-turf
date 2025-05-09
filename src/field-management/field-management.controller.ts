@@ -127,12 +127,12 @@ export class FieldManagementController {
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth('access-token')
     @ApiOperation({ 
-        summary: 'Create a new field [POST /api/v1/field/create]', 
-        description: 'Create a new field with detailed information including facilities, pricing, and schedules' 
+        summary: 'Create a new field',
+        description: 'Create a new sports facility with detailed information including location, pricing, and sport type. Requires company or facility manager role with facility modification permissions.' 
     })
     @ApiBody({
         type: FieldInfoDto,
-        description: 'Field information including basic details, facilities, and initial pricing',
+        description: 'Field information including name, location, sport type, and pricing details',
         required: true
     })
     @ApiResponse({ 
@@ -147,39 +147,16 @@ export class FieldManagementController {
                             type: 'object',
                             properties: {
                                 id: { type: 'number', example: 1 },
-                                name: { type: 'string' },
-                                description: { type: 'string' },
-                                sportType: { type: 'string', enum: Object.values(SportType) },
-                                location: {
-                                    type: 'object',
-                                    properties: {
-                                        address: { type: 'string' },
-                                        city: { type: 'string' },
-                                        coordinates: {
-                                            type: 'object',
-                                            properties: {
-                                                latitude: { type: 'number' },
-                                                longitude: { type: 'number' }
-                                            }
-                                        }
-                                    }
-                                },
-                                facilities: {
-                                    type: 'array',
-                                    items: { type: 'string' }
-                                },
-                                pricing: {
-                                    type: 'array',
-                                    items: {
-                                        type: 'object',
-                                        properties: {
-                                            durationInMinutes: { type: 'number' },
-                                            price: { type: 'number' }
-                                        }
-                                    }
-                                },
+                                name: { type: 'string', example: 'Premier Football Ground' },
+                                description: { type: 'string', example: 'Professional football field with artificial turf' },
+                                address: { type: 'string', example: '123 Sports Avenue' },
+                                city: { type: 'string', example: 'Sportstown' },
+                                country: { type: 'string', example: 'Sportland' },
+                                sportType: { type: 'string', enum: Object.values(SportType), example: 'FOOTBALL' },
+                                pricePerHour: { type: 'number', example: 100 },
+                                brandId: { type: 'string', example: '1' },
                                 status: { type: 'number', example: 1 },
-                                createdBy: { type: 'number' },
+                                createdBy: { type: 'number', example: 5 },
                                 createdAt: { type: 'string', format: 'date-time' }
                             }
                         }
@@ -188,6 +165,30 @@ export class FieldManagementController {
             ]
         }
     })
+    @ApiResponse({ 
+        status: 400, 
+        description: 'Bad request - Invalid input data',
+        schema: {
+            allOf: [
+                { $ref: '#/components/schemas/BaseSerializer' },
+                {
+                    properties: {
+                        statusCode: { type: 'number', example: 400 },
+                        success: { type: 'boolean', example: false },
+                        message: { type: 'string', example: 'Field creation failed' },
+                        data: { type: 'null', example: null },
+                        errors: { 
+                            type: 'array', 
+                            items: { type: 'string' },
+                            example: ['Invalid sport type', 'Brand not found']
+                        }
+                    }
+                }
+            ]
+        }
+    })
+    @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
+    @ApiResponse({ status: 403, description: 'Forbidden - User does not have required permissions' })
     async createField(@Body() fieldInfo: FieldInfoDto, @Req() req): Promise<BaseSerializer> {
         const { data, error } = await this.fieldManagementService.addFieldsService(fieldInfo, req.user);
         if (error) {
@@ -209,18 +210,81 @@ export class FieldManagementController {
     }
 
     @Post(':fieldId/schedules')
-    @Roles(UserRole.COMPANY, UserRole.FACILITY_MANAGER, UserRole.MAINTENANCE_STAFF)
+    @Roles(UserRole.COMPANY, UserRole.FACILITY_MANAGER)
     @RequirePermissions('canUpdateSchedules')
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth('access-token')
-    @ApiOperation({ 
-        summary: 'Add field schedule [POST /api/v1/field/{fieldId}/schedules]', 
-        description: 'Add a new schedule slot for a field' 
+    @ApiOperation({
+        summary: 'Add field schedule',
+        description: 'Create a new availability schedule for a specific field, including operating hours and time blocks'
     })
-    @ApiParam({ name: 'fieldId', type: 'number', description: 'ID of the field' })
-    @ApiResponse({ status: 201, description: 'Schedule created successfully' })
-    @ApiResponse({ status: 400, description: 'Invalid input' })
-    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiParam({
+        name: 'fieldId',
+        description: 'ID of the field to add schedule for',
+        type: 'number'
+    })
+    @ApiBody({
+        type: FieldScheduleDto,
+        description: 'Schedule information including day of week, open/close times, and optional zone configuration',
+    })
+    @ApiResponse({
+        status: 201,
+        description: 'Schedule created successfully',
+        schema: {
+            allOf: [
+                { $ref: '#/components/schemas/BaseSerializer' },
+                {
+                    properties: {
+                        data: {
+                            type: 'object',
+                            properties: {
+                                id: { type: 'number', example: 1 },
+                                fieldId: { type: 'number', example: 5 },
+                                dayOfWeek: { type: 'string', enum: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'], example: 'MONDAY' },
+                                openTime: { type: 'string', example: '09:00:00' },
+                                closeTime: { type: 'string', example: '22:00:00' },
+                                isAvailable: { type: 'boolean', example: true },
+                                specialPrice: { type: 'number', example: 80, nullable: true },
+                                zoneName: { type: 'string', example: 'North Half', nullable: true },
+                                zoneConfig: { 
+                                    type: 'object', 
+                                    nullable: true,
+                                    properties: {
+                                        capacity: { type: 'number', example: 15 },
+                                        description: { type: 'string', example: 'North half of the main football field' },
+                                        amenities: { 
+                                            type: 'array', 
+                                            items: { type: 'string' },
+                                            example: ['Floodlights', 'Water Station']
+                                        }
+                                    }
+                                },
+                                recurrenceType: { type: 'string', enum: ['DAILY', 'WEEKLY', 'BIWEEKLY', 'MONTHLY', 'CUSTOM'], example: 'WEEKLY' },
+                                timeBlocks: {
+                                    type: 'array',
+                                    items: {
+                                        type: 'object',
+                                        properties: {
+                                            startTime: { type: 'string', example: '09:00:00' },
+                                            endTime: { type: 'string', example: '12:00:00' },
+                                            price: { type: 'number', example: 80.00 },
+                                            capacity: { type: 'number', example: 20 }
+                                        }
+                                    }
+                                },
+                                status: { type: 'number', example: 1 },
+                                createdAt: { type: 'string', format: 'date-time' }
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    })
+    @ApiResponse({ status: 400, description: 'Bad request - Invalid schedule data' })
+    @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
+    @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
+    @ApiResponse({ status: 404, description: 'Field not found' })
     async addFieldSchedule(
         @Param('fieldId', ParseIntPipe) fieldId: number,
         @Body() scheduleDto: FieldScheduleDto,
@@ -286,61 +350,48 @@ export class FieldManagementController {
     }
 
     @Get(':fieldId/schedules')
-    @ApiOperation({ 
-        summary: 'Get field schedules [GET /api/v1/field/{fieldId}/schedules]', 
-        description: 'Retrieve all schedules for a specific field including regular hours, special hours, and blocked periods' 
+    @ApiOperation({
+        summary: 'List field schedules',
+        description: 'Get all availability schedules for a specific field'
     })
-    @ApiParam({ 
-        name: 'fieldId', 
-        type: 'number', 
-        description: 'ID of the field to get schedules for' 
+    @ApiParam({
+        name: 'fieldId',
+        description: 'ID of the field to get schedules for',
+        type: 'number'
     })
-    @ApiResponse({ 
-        status: 200, 
-        description: 'Field schedules retrieved successfully',
+    @ApiResponse({
+        status: 200,
+        description: 'Schedules retrieved successfully',
         schema: {
             allOf: [
                 { $ref: '#/components/schemas/BaseSerializer' },
                 {
                     properties: {
                         data: {
-                            type: 'object',
-                            properties: {
-                                regularHours: {
-                                    type: 'array',
-                                    items: {
-                                        type: 'object',
-                                        properties: {
-                                            id: { type: 'number', example: 1 },
-                                            dayOfWeek: { type: 'number', example: 1, description: '1 = Monday, 7 = Sunday' },
-                                            openTime: { type: 'string', example: '09:00:00' },
-                                            closeTime: { type: 'string', example: '22:00:00' },
-                                            isAvailable: { type: 'boolean', example: true }
-                                        }
-                                    }
-                                },
-                                specialHours: {
-                                    type: 'array',
-                                    items: {
-                                        type: 'object',
-                                        properties: {
-                                            id: { type: 'number' },
-                                            date: { type: 'string', format: 'date' },
-                                            openTime: { type: 'string' },
-                                            closeTime: { type: 'string' },
-                                            reason: { type: 'string', nullable: true }
-                                        }
-                                    }
-                                },
-                                blockedPeriods: {
-                                    type: 'array',
-                                    items: {
-                                        type: 'object',
-                                        properties: {
-                                            id: { type: 'number' },
-                                            startTime: { type: 'string', format: 'date-time' },
-                                            endTime: { type: 'string', format: 'date-time' },
-                                            reason: { type: 'string' }
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    id: { type: 'number', example: 1 },
+                                    dayOfWeek: { type: 'string', enum: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'], example: 'MONDAY' },
+                                    openTime: { type: 'string', example: '09:00:00' },
+                                    closeTime: { type: 'string', example: '22:00:00' },
+                                    isAvailable: { type: 'boolean', example: true },
+                                    specialPrice: { type: 'number', example: 80, nullable: true },
+                                    zoneName: { type: 'string', example: 'North Half', nullable: true },
+                                    zoneConfig: { type: 'object', nullable: true },
+                                    recurrenceType: { type: 'string', enum: ['DAILY', 'WEEKLY', 'BIWEEKLY', 'MONTHLY', 'CUSTOM'], example: 'WEEKLY' },
+                                    recurrenceConfig: { type: 'object', nullable: true },
+                                    timeBlocks: {
+                                        type: 'array',
+                                        items: {
+                                            type: 'object',
+                                            properties: {
+                                                startTime: { type: 'string', example: '09:00:00' },
+                                                endTime: { type: 'string', example: '12:00:00' },
+                                                price: { type: 'number', example: 80.00 },
+                                                capacity: { type: 'number', example: 20 }
+                                            }
                                         }
                                     }
                                 }
@@ -351,6 +402,7 @@ export class FieldManagementController {
             ]
         }
     })
+    @ApiResponse({ status: 404, description: 'Field not found' })
     async getFieldSchedules(
         @Param('fieldId', ParseIntPipe) fieldId: number,
     ): Promise<BaseSerializer> {
@@ -410,36 +462,78 @@ export class FieldManagementController {
     }
 
     @Get(':fieldId/availability')
-    @ApiOperation({ 
-        summary: 'Check field availability [GET /api/v1/field/{fieldId}/availability]', 
-        description: 'Check if a field is available at a specific date and time' 
+    @ApiOperation({
+        summary: 'Check field availability',
+        description: 'Check field availability for a specific date, returning all available time slots'
     })
-    @ApiParam({ name: 'fieldId', type: 'number', description: 'ID of the field' })
-    @ApiQuery({ 
-        name: 'date', 
-        required: true, 
-        type: String, 
-        description: 'Date to check availability (ISO format)',
-        example: '2025-04-12T14:00:00Z'
+    @ApiParam({
+        name: 'fieldId',
+        description: 'ID of the field to check',
+        type: 'number'
     })
-    @ApiResponse({ 
-        status: 200, 
-        description: 'Availability checked successfully',
+    @ApiQuery({
+        name: 'date',
+        description: 'Date to check availability (YYYY-MM-DD)',
+        type: 'string',
+        required: true,
+        example: '2025-04-12'
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'Availability retrieved successfully',
         schema: {
-            example: {
-                available: true,
-                reason: null,
-                schedule: {
-                    id: 1,
-                    openTime: '09:00:00',
-                    closeTime: '22:00:00',
-                    isAvailable: true
-                },
-                specialPrice: null
-            }
+            allOf: [
+                { $ref: '#/components/schemas/BaseSerializer' },
+                {
+                    properties: {
+                        data: {
+                            type: 'object',
+                            properties: {
+                                date: { type: 'string', format: 'date', example: '2025-04-12' },
+                                dayOfWeek: { type: 'string', example: 'SATURDAY' },
+                                openTime: { type: 'string', example: '09:00:00' },
+                                closeTime: { type: 'string', example: '22:00:00' },
+                                availableSlots: {
+                                    type: 'array',
+                                    items: {
+                                        type: 'object',
+                                        properties: {
+                                            startTime: { type: 'string', example: '09:00:00' },
+                                            endTime: { type: 'string', example: '10:00:00' },
+                                            price: { type: 'number', example: 80 },
+                                            isAvailable: { type: 'boolean', example: true },
+                                            zone: { 
+                                                type: 'string', 
+                                                example: 'North Half', 
+                                                nullable: true 
+                                            }
+                                        }
+                                    }
+                                },
+                                bookedSlots: {
+                                    type: 'array',
+                                    items: {
+                                        type: 'object',
+                                        properties: {
+                                            startTime: { type: 'string', example: '18:00:00' },
+                                            endTime: { type: 'string', example: '20:00:00' },
+                                            zone: { 
+                                                type: 'string', 
+                                                example: 'Full Field',
+                                                nullable: true 
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            ]
         }
     })
     @ApiResponse({ status: 400, description: 'Invalid date format' })
+    @ApiResponse({ status: 404, description: 'Field not found or no schedule for this day' })
     async checkFieldAvailability(
         @Param('fieldId', ParseIntPipe) fieldId: number,
         @Query('date') dateStr: string,

@@ -12,21 +12,34 @@ async function bootstrap() {
   // Swagger configuration
   const config = new DocumentBuilder()
     .setTitle('Find Your Turf API')
-    .setDescription('The Find Your Turf API documentation')
+    .setDescription('The Find Your Turf API documentation for sports facility booking platform')
     .setVersion('1.0')
     .addTag('auth', 'Authentication endpoints')
     .addTag('fields', 'Field management endpoints')
     .addTag('bookings', 'Booking management endpoints')
+    .addTag('users', 'User management endpoints')
     .addTag('brands', 'Brand management endpoints')
     .addTag('reviews', 'Field review endpoints')
+    .addTag('admin', 'Admin-only endpoints')
     .addBearerAuth(
       {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
+        name: 'Authorization',
+        description: 'Enter JWT token',
         in: 'header',
       },
       'access-token',
+    )
+    .addCookieAuth(
+      'refreshToken',
+      {
+        type: 'apiKey',
+        in: 'cookie',
+        name: 'refreshToken',
+      },
+      'refresh-token'
     )
     .build();
 

@@ -7,6 +7,7 @@ import { BaseSerializer } from '../app.serializer';
 import { ApiResponseMessages } from '../common/api-response-messages';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../db-modules/users.entity';
+import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
 
 @ApiTags('bookings')
 @Controller('booking')
@@ -260,13 +261,13 @@ export class BookingController {
     @Put(':id/cancel')
     @ApiBearerAuth('access-token')
     @ApiOperation({ 
-        summary: 'Cancel booking [PUT /api/v1/booking/{id}/cancel]',
-        description: 'Cancel an existing booking. Only pending or confirmed bookings can be cancelled.' 
+        summary: 'Cancel booking',
+        description: 'Cancel an existing booking. Only the booking owner or facility staff can cancel bookings.' 
     })
     @ApiParam({
         name: 'id',
-        type: 'number',
         description: 'ID of the booking to cancel',
+        type: 'number',
         required: true
     })
     @ApiResponse({ 
@@ -281,14 +282,11 @@ export class BookingController {
                             type: 'object',
                             properties: {
                                 id: { type: 'number', example: 1 },
-                                status: { type: 'string', example: 'cancelled' },
-                                cancellationReason: { type: 'string', nullable: true },
+                                status: { type: 'string', enum: ['cancelled'], example: 'cancelled' },
                                 cancelledAt: { type: 'string', format: 'date-time' },
-                                refundStatus: { 
-                                    type: 'string', 
-                                    enum: ['not_applicable', 'pending', 'processed'],
-                                    nullable: true 
-                                }
+                                cancelledBy: { type: 'number', example: 10 },
+                                refundAmount: { type: 'number', example: 80, nullable: true },
+                                cancelReason: { type: 'string', example: 'Weather conditions', nullable: true }
                             }
                         }
                     }
@@ -296,9 +294,9 @@ export class BookingController {
             ]
         }
     })
-    @ApiResponse({ status: 400, description: 'Invalid booking ID or booking cannot be cancelled' })
+    @ApiResponse({ status: 400, description: 'Bad request - Cannot cancel booking' })
     @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
-    @ApiResponse({ status: 403, description: 'Forbidden - User does not own this booking' })
+    @ApiResponse({ status: 403, description: 'Forbidden - User is not authorized to cancel this booking' })
     @ApiResponse({ status: 404, description: 'Booking not found' })
     async cancelBooking(
         @Param('id') bookingId: number,
@@ -328,38 +326,47 @@ export class BookingController {
         );
     }
 
-    @Post(':id/confirm')
-    @Roles(UserRole.COMPANY)
+    @Put(':id/confirm')
     @ApiBearerAuth('access-token')
+    @Roles(UserRole.COMPANY, UserRole.FACILITY_MANAGER, UserRole.CUSTOMER_SERVICE)
+    @RequirePermissions('canManageBookings')
     @ApiOperation({ 
-        summary: 'Confirm booking [POST /api/v1/booking/{bookingId}/confirm]',
-        description: 'Confirm a pending booking (Company only)' 
+        summary: 'Confirm booking',
+        description: 'Confirm a pending booking. Only facility staff with booking management permissions can confirm bookings.' 
     })
     @ApiParam({
         name: 'id',
         description: 'ID of the booking to confirm',
-        type: 'number'
+        type: 'number',
+        required: true
     })
     @ApiResponse({ 
         status: 200, 
         description: 'Booking confirmed successfully',
-        type: BaseSerializer
+        schema: {
+            allOf: [
+                { $ref: '#/components/schemas/BaseSerializer' },
+                {
+                    properties: {
+                        data: {
+                            type: 'object',
+                            properties: {
+                                id: { type: 'number', example: 1 },
+                                status: { type: 'string', enum: ['confirmed'], example: 'confirmed' },
+                                confirmedAt: { type: 'string', format: 'date-time' },
+                                confirmedBy: { type: 'number', example: 5 },
+                                notes: { type: 'string', example: 'Booking confirmed by facility manager', nullable: true }
+                            }
+                        }
+                    }
+                }
+            ]
+        }
     })
-    @ApiResponse({ 
-        status: 400, 
-        description: 'Invalid booking ID or booking cannot be confirmed',
-        type: BaseSerializer
-    })
-    @ApiResponse({ 
-        status: 401, 
-        description: 'Unauthorized',
-        type: BaseSerializer
-    })
-    @ApiResponse({ 
-        status: 403, 
-        description: 'Forbidden - User is not a company',
-        type: BaseSerializer
-    })
+    @ApiResponse({ status: 400, description: 'Bad request - Booking cannot be confirmed' })
+    @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
+    @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
+    @ApiResponse({ status: 404, description: 'Booking not found' })
     async confirmBooking(
         @Param('id') bookingId: number,
         @Req() req,

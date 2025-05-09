@@ -478,6 +478,67 @@ enum AuditActionType {
 }
 ```
 
+### API Endpoints
+
+#### Create Staff User
+```http
+POST /api/v1/users/staff
+Authorization: Bearer {jwt_token}
+{
+  "username": "facility_manager1",
+  "email": "manager@example.com",
+  "password": "SecurePassword123",
+  "role": "facility_manager",
+  "permissions": {
+    "canManageStaff": true,
+    "canManageBookings": true,
+    "canUpdateSchedules": true,
+    "canRespondToReviews": true,
+    "canAccessReports": true,
+    "canUpdatePricing": true,
+    "canModifyFacilities": true
+  }
+}
+```
+
+#### List Staff Users
+```http
+GET /api/v1/users/staff
+Authorization: Bearer {jwt_token}
+```
+
+#### Get Staff User Details
+```http
+GET /api/v1/users/staff/{staffId}
+Authorization: Bearer {jwt_token}
+```
+
+#### Update Staff User
+```http
+PUT /api/v1/users/staff/{staffId}
+Authorization: Bearer {jwt_token}
+{
+  "username": "maintenance_lead",
+  "email": "maintenance@example.com",
+  "role": "maintenance_staff",
+  "permissions": {
+    "canUpdateSchedules": true
+  }
+}
+```
+
+#### Remove Staff User
+```http
+DELETE /api/v1/users/staff/{staffId}
+Authorization: Bearer {jwt_token}
+```
+
+#### Get Audit Logs
+```http
+GET /api/v1/users/audit-logs?action=staff_added&startDate=2025-01-01T00:00:00Z&endDate=2025-01-31T23:59:59Z
+Authorization: Bearer {jwt_token}
+```
+
 ### Database Schema
 
 #### Staff Management Tables
@@ -517,10 +578,28 @@ CREATE TABLE "audit_logs" (
 ```typescript
 @Injectable()
 export class StaffPermissionsGuard implements CanActivate {
+  constructor(private reflector: Reflector) {}
+  
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    // Validate required permissions against user's assigned permissions
-    // Company owners bypass permission checks
-    // Staff members must have explicitly granted permissions
+    const requiredPermissions = this.reflector.get<string[]>('permissions', context.getHandler());
+    if (!requiredPermissions) {
+      return true; // No permissions required
+    }
+
+    const request = context.switchToHttp().getRequest();
+    const user = request.user;
+
+    // Admin and Company users bypass permission checks
+    if (user.role === UserRole.ADMIN || user.role === UserRole.COMPANY) {
+      return true;
+    }
+
+    // Staff members need specific permissions
+    if (user.permissions) {
+      return requiredPermissions.every(permission => user.permissions[permission] === true);
+    }
+
+    return false;
   }
 }
 ```
@@ -537,16 +616,34 @@ async updateFieldDetails() {
 
 1. **Creating Audit Logs:**
 ```typescript
-async createAuditLog(action: AuditActionType, userId: number, details: any) {
-  const log = {
-    userId,
-    action,
-    details,
-    timestamp: new Date(),
-    ipAddress: request.ip,
-    userAgent: request.headers['user-agent']
-  };
-  await this.auditLogsRepository.save(log);
+async createAuditLog(
+  action: AuditActionType,
+  userId: number,
+  details: any,
+  fieldId?: number,
+  brandId?: number,
+  ipAddress?: string,
+  userAgent?: string,
+): Promise<AuditLogs> {
+  try {
+    const auditLog = this.auditLogsRepository.create({
+      action,
+      userId: { id: userId } as any,
+      details,
+      fieldId: fieldId ? { id: fieldId } as any : null,
+      brandId: brandId ? { id: brandId } as any : null,
+      ipAddress,
+      userAgent,
+      timestamp: new Date(),
+    });
+
+    return await this.auditLogsRepository.save(auditLog);
+  } catch (error) {
+    // Log the error but don't fail the operation
+    console.error('Failed to create audit log:', error);
+    // Return null to indicate failure but allow the main operation to continue
+    return null;
+  }
 }
 ```
 
@@ -645,8 +742,10 @@ try {
 try {
   await this.createAuditLog(action, userId, details);
 } catch (logError) {
-  // Fallback to file-based logging
-  this.loggingService.error('Failed to create audit log:', logError.stack);
+  // Log the error but don't fail the operation
+  console.error('Failed to create audit log:', logError.stack);
+  // Return null to indicate failure but allow the main operation to continue
+  return null;
 }
 ```
 

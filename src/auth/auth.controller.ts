@@ -167,7 +167,7 @@ export class AuthController {
   @Post('/refresh')
   @AuthRateLimit()
   @ApiOperation({ 
-    summary: 'Refresh access token [POST /api/v1/auth/refresh]', 
+    summary: 'Refresh access token', 
     description: 'Get new access token using refresh token stored in HTTP-only cookie'
   })
   @ApiCookieAuth('refreshToken')
@@ -180,7 +180,6 @@ export class AuthController {
   @ApiResponse({ 
     status: 200, 
     description: 'Token refreshed successfully',
-    type: BaseSerializer,
     schema: {
       allOf: [
         { $ref: '#/components/schemas/BaseSerializer' },
@@ -203,22 +202,35 @@ export class AuthController {
   @ApiResponse({ 
     status: 401, 
     description: 'Invalid or missing refresh token',
-    type: BaseSerializer
+    schema: {
+      allOf: [
+        { $ref: '#/components/schemas/BaseSerializer' },
+        {
+          properties: {
+            statusCode: { type: 'number', example: 401 },
+            success: { type: 'boolean', example: false },
+            message: { type: 'string', example: 'Refresh token not found' },
+            data: { type: 'null', example: null },
+            errors: { 
+              type: 'array', 
+              items: { type: 'string' },
+              example: ['Refresh token not found']
+            }
+          }
+        }
+      ]
+    }
   })
   async refreshToken(
     @Req() req,
   ): Promise<BaseSerializer> {
     try {
       const refreshToken = req.cookies['refreshToken'];
-      console.log("🚀 ~ auth.controller.ts:163 ~ AuthController ~ refreshToken:", refreshToken);
       if (!refreshToken) {
         throw new UnauthorizedException('Refresh token not found');
       }
 
       const result = await this.authService.refreshToken(refreshToken);
-      console.log("🚀 ~ auth.controller.ts:169 ~ AuthController ~ result:", result);
-
-      console.log("am i here")
 
       return new BaseSerializer(
         HttpStatus.OK,
@@ -281,19 +293,12 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ 
-    summary: 'Get user profile [GET /api/v1/auth/profile]', 
-    description: 'Get authenticated user profile information'
-  })
-  @ApiHeader({
-    name: 'Authorization',
-    description: 'Bearer token',
-    required: true,
-    example: 'Bearer eyJhbGciOiJ...'
+    summary: 'Get user profile', 
+    description: 'Get detailed information about the currently authenticated user'
   })
   @ApiResponse({ 
     status: 200, 
     description: 'Profile retrieved successfully',
-    type: BaseSerializer,
     schema: {
       allOf: [
         { $ref: '#/components/schemas/BaseSerializer' },
@@ -302,26 +307,26 @@ export class AuthController {
             data: {
               type: 'object',
               properties: {
-                id: { type: 'number', example: 1 },
-                code: { type: 'string', example: 'usr_123' },
-                username: { type: 'string', example: 'john_doe' },
-                email: { type: 'string', example: 'john@example.com' },
-                role: { type: 'string', enum: ['admin', 'company', 'consumer', 'facility_manager', 'maintenance_staff', 'customer_service'] },
-                permissions: {
+                id: { type: 'number', example: 10 },
+                email: { type: 'string', example: 'user@example.com' },
+                fullName: { type: 'string', example: 'John Doe' },
+                role: { 
+                  type: 'string', 
+                  enum: ['admin', 'company', 'consumer', 'facility_manager', 'maintenance_staff', 'customer_service'],
+                  example: 'consumer'
+                },
+                parentUserId: { type: 'number', example: 5, nullable: true },
+                permissions: { 
                   type: 'object',
-                  properties: {
-                    canManageStaff: { type: 'boolean' },
-                    canManageBookings: { type: 'boolean' },
-                    canUpdateSchedules: { type: 'boolean' },
-                    canRespondToReviews: { type: 'boolean' },
-                    canAccessReports: { type: 'boolean' },
-                    canUpdatePricing: { type: 'boolean' },
-                    canModifyFacilities: { type: 'boolean' }
+                  nullable: true,
+                  example: {
+                    canManageBookings: true,
+                    canUpdateSchedules: false
                   }
                 },
-                status: { type: 'number', example: 1 },
-                createdAt: { type: 'string', format: 'date-time' },
-                updatedAt: { type: 'string', format: 'date-time' }
+                profileImage: { type: 'string', nullable: true },
+                phoneNumber: { type: 'string', example: '+1234567890', nullable: true },
+                createdAt: { type: 'string', format: 'date-time' }
               }
             }
           }
@@ -329,11 +334,7 @@ export class AuthController {
       ]
     }
   })
-  @ApiResponse({ 
-    status: 401, 
-    description: 'Unauthorized',
-    type: BaseSerializer
-  })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
   async getProfile(@Req() req): Promise<BaseSerializer> {
     const email = req.user?.email;
     if (!email) {

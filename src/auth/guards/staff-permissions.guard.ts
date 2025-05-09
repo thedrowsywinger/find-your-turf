@@ -9,29 +9,26 @@ export class StaffPermissionsGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const requiredPermissions = this.reflector.get<string[]>('permissions', context.getHandler());
     if (!requiredPermissions) {
-      return true;
+      return true; // No permissions required
     }
 
     const request = context.switchToHttp().getRequest();
     const user = request.user;
+    
+    if (!user) {
+      return false; // No user in request (should be handled by JwtAuthGuard)
+    }
 
-    // Company owners bypass permission checks
-    if (user.role === UserRole.COMPANY) {
+    // Admin and Company users bypass permission checks
+    if (user.role === UserRole.ADMIN || user.role === UserRole.COMPANY) {
       return true;
     }
 
-    // Check if user has any staff role
-    const isStaffMember = [
-      UserRole.FACILITY_MANAGER,
-      UserRole.MAINTENANCE_STAFF,
-      UserRole.CUSTOMER_SERVICE
-    ].includes(user.role);
-
-    if (!isStaffMember || !user.permissions) {
-      return false;
+    // Staff members need specific permissions
+    if (user.permissions) {
+      return requiredPermissions.every(permission => user.permissions[permission] === true);
     }
 
-    // Check if user has all required permissions
-    return requiredPermissions.every(permission => user.permissions[permission] === true);
+    return false;
   }
 }
