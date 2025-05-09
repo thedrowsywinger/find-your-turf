@@ -10,8 +10,6 @@ import { FieldManagementModule } from './field-management/field-management.modul
 import { AuthModule } from './auth/auth.module';
 import { BookingModule } from './booking/booking.module';
 import { AdminModule } from './admin/admin.module';
-import { UserManagementController } from './user-management/user-management.controller';
-import { UserManagementService } from './user-management/user-management.service';
 import { UserManagementModule } from './user-management/user-management.module';
 
 @Module({
@@ -52,14 +50,13 @@ import { UserManagementModule } from './user-management/user-management.module';
     AdminModule,
     UserManagementModule,
   ],
-  controllers: [AppController, UserManagementController],
+  controllers: [AppController],
   providers: [
     AppService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
-    UserManagementService,
   ],
 })
 export class AppModule {}
