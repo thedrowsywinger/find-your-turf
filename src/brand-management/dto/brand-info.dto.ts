@@ -1,4 +1,4 @@
-// src/brand-management/dto/create-brand.dto.ts
+// src/brand-management/dto/brand-info.dto.ts
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';

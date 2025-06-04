@@ -236,7 +236,7 @@ export class AuthController {
         HttpStatus.OK,
         true,
         ApiResponseMessages.SUCCESS,
-        { accessToken: result.refreshToken },
+        { accessToken: result.accessToken },
         null,
       );
     } catch (error) {
