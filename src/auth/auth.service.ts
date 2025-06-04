@@ -75,7 +75,7 @@ export class AuthService {
     throw new UnauthorizedException('Invalid credentials');
   }
 
-  async refreshToken(refreshToken: string): Promise<{ refreshToken: string }> {
+  async refreshToken(refreshToken: string): Promise<{ accessToken: string }> {
     try {
       const payload = await this.jwtService.verifyAsync(refreshToken, {
         secret: this.configService.get('JWT_REFRESH_SECRET'),
@@ -104,7 +104,7 @@ export class AuthService {
         timestamp: new Date()
       });
 
-      return { refreshToken: accessToken };
+      return { accessToken };
     } catch (error) {
       this.loggingService.error('Token refresh error', error.stack);
       throw new UnauthorizedException('Invalid refresh token');

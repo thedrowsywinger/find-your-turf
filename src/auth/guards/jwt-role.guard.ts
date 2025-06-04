@@ -1,4 +1,4 @@
-// src/auth/guards/jwt-roles.guard.ts
+// src/auth/guards/jwt-role.guard.ts
 
 import {
   Injectable,

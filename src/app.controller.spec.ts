@@ -15,8 +15,10 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHealthCheckStatus()).toBe('Hello World!');
+    it('should return the health check status', () => {
+      expect(appController.getHealthCheckStatus()).toBe(
+        'Health Check OK - All systems operational',
+      );
     });
   });
 });
