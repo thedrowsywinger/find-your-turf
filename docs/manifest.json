@@ -1,0 +1,168 @@
+{
+  "name": "FindYourTurf Documentation Shards",
+  "version": "1.0.0",
+  "description": "LLM-optimized documentation shards for FindYourTurf sports facility booking platform",
+  "created": "2025-08-20",
+  "total_files": 17,
+  "categories": {
+    "user_roles": {
+      "description": "User role capabilities and permissions",
+      "files": [
+        {
+          "filename": "roles_company_users.md",
+          "description": "Field providers and facility managers who list and manage sports venues",
+          "token_estimate": 1200,
+          "key_topics": ["field creation", "booking management", "review responses", "staff management"]
+        },
+        {
+          "filename": "roles_consumer_users.md",
+          "description": "End users who search for and book sports facilities",
+          "token_estimate": 1150,
+          "key_topics": ["field search", "booking creation", "reviews submission", "booking history"]
+        },
+        {
+          "filename": "roles_admin_users.md",
+          "description": "System administrators who manage and oversee the entire platform",
+          "token_estimate": 1100,
+          "key_topics": ["user management", "content moderation", "system configuration", "performance monitoring"]
+        },
+        {
+          "filename": "roles_staff_management.md",
+          "description": "Sub-account management and permissions for facility staff members",
+          "token_estimate": 1400,
+          "key_topics": ["staff roles", "permission schema", "audit logging", "authorization flow"]
+        }
+      ]
+    },
+    "core_api": {
+      "description": "Core API functionality and endpoints",
+      "files": [
+        {
+          "filename": "api_field_management.md",
+          "description": "CRUD operations for sports field and facility management",
+          "token_estimate": 1300,
+          "key_topics": ["field creation", "field updates", "validation rules", "sport types"]
+        },
+        {
+          "filename": "api_scheduling_system.md",
+          "description": "Advanced scheduling features including zones, time blocks, and recurrence patterns",
+          "token_estimate": 1450,
+          "key_topics": ["zone management", "time blocks", "recurrence patterns", "validation rules"]
+        },
+        {
+          "filename": "api_booking_flow.md",
+          "description": "Complete booking lifecycle from creation to completion",
+          "token_estimate": 1350,
+          "key_topics": ["booking creation", "booking states", "payment integration", "cancellation policy"]
+        },
+        {
+          "filename": "api_reviews_ratings.md",
+          "description": "User review submission and facility owner response management",
+          "token_estimate": 1250,
+          "key_topics": ["review submission", "company responses", "rating aggregation", "review moderation"]
+        },
+        {
+          "filename": "api_search_discovery.md",
+          "description": "Advanced search and filtering capabilities for field discovery",
+          "token_estimate": 1380,
+          "key_topics": ["location-based search", "availability checking", "price filtering", "geolocation features"]
+        },
+        {
+          "filename": "api_pricing_configuration.md",
+          "description": "Flexible pricing models and dynamic pricing configuration",
+          "token_estimate": 1400,
+          "key_topics": ["time block pricing", "seasonal pricing", "zone pricing", "dynamic pricing rules"]
+        }
+      ]
+    },
+    "system_architecture": {
+      "description": "System architecture and technical implementation",
+      "files": [
+        {
+          "filename": "auth_security.md",
+          "description": "JWT authentication, RBAC implementation, and comprehensive security measures",
+          "token_estimate": 1420,
+          "key_topics": ["JWT tokens", "role-based access", "rate limiting", "security headers"]
+        },
+        {
+          "filename": "api_standards.md",
+          "description": "Standardized response formats, error handling, and validation patterns",
+          "token_estimate": 1380,
+          "key_topics": ["response formats", "status codes", "validation patterns", "pagination standards"]
+        },
+        {
+          "filename": "database_schema.md",
+          "description": "Complete database structure including tables, relationships, and indexes",
+          "token_estimate": 1500,
+          "key_topics": ["entity relationships", "table schemas", "JSONB structures", "performance indexes"]
+        },
+        {
+          "filename": "performance_monitoring.md",
+          "description": "Comprehensive monitoring, logging, and performance optimization strategies",
+          "token_estimate": 1450,
+          "key_topics": ["performance metrics", "health checks", "caching strategy", "security monitoring"]
+        }
+      ]
+    },
+    "developer_integration": {
+      "description": "Developer integration patterns and best practices",
+      "files": [
+        {
+          "filename": "integration_workflows.md",
+          "description": "Implementation patterns and workflows for integrating with the FindYourTurf platform",
+          "token_estimate": 1480,
+          "key_topics": ["authentication workflow", "booking workflow", "error handling patterns", "webhook integration"]
+        },
+        {
+          "filename": "error_handling_guide.md",
+          "description": "Comprehensive error scenarios, status codes, and handling strategies",
+          "token_estimate": 1450,
+          "key_topics": ["error response formats", "retry strategies", "circuit breaker pattern", "debugging tips"]
+        },
+        {
+          "filename": "testing_guidelines.md",
+          "description": "Comprehensive testing strategies for unit, integration, and security testing",
+          "token_estimate": 1500,
+          "key_topics": ["unit testing patterns", "integration testing", "security testing", "performance testing"]
+        }
+      ]
+    }
+  },
+  "cross_references": {
+    "description": "Key cross-reference relationships between shards",
+    "relationships": [
+      {
+        "from": "roles_company_users.md",
+        "to": ["roles_staff_management.md", "api_field_management.md", "api_scheduling_system.md"],
+        "relationship": "Company users manage staff and fields"
+      },
+      {
+        "from": "api_booking_flow.md",
+        "to": ["api_scheduling_system.md", "api_reviews_ratings.md", "roles_consumer_users.md"],
+        "relationship": "Booking depends on scheduling and enables reviews"
+      },
+      {
+        "from": "auth_security.md",
+        "to": ["roles_staff_management.md", "api_standards.md", "performance_monitoring.md"],
+        "relationship": "Security underpins all system components"
+      },
+      {
+        "from": "integration_workflows.md",
+        "to": ["error_handling_guide.md", "testing_guidelines.md", "api_standards.md"],
+        "relationship": "Integration patterns require error handling and testing"
+      }
+    ]
+  },
+  "usage_guidelines": {
+    "context_windows": "Each shard designed for 1200-1500 tokens to fit within LLM context constraints",
+    "independence": "Each file is independently useful while maintaining cross-references",
+    "code_preservation": "All code examples, schemas, and API specifications preserved exactly",
+    "claude_code_optimization": "Optimized for AI-powered development assistance with clear, actionable content"
+  },
+  "technical_accuracy": {
+    "api_endpoints": "All HTTP methods, status codes, and response formats verified",
+    "database_schema": "Complete table structures with proper constraints and indexes",
+    "security_implementation": "JWT, RBAC, and security measures accurately documented",
+    "error_scenarios": "Comprehensive error handling with proper HTTP status codes"
+  }
+}
